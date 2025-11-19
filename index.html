@@ -1,0 +1,1013 @@
+<!-- START OF FILE 積分編排V10.12_Fix.html -->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>瑞士制積分編排系統 V10.12 (桌卡修正版)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+/* --- 核心變數 --- */
+:root {
+    --primary: #3b82f6; --primary-dark: #2563eb; --accent: #0ea5e9;
+    --bg: #f0f9ff; --card-bg: #ffffff; --text-main: #0f172a; --text-sub: #64748b;
+    --radius: 16px; --shadow-md: 0 4px 6px -1px rgba(59, 130, 246, 0.15);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text-main); padding: 20px; margin: 0; line-height: 1.6; font-size: 16px; }
+.container { max-width: 1200px; margin: 0 auto; padding-bottom: 60px; }
+
+/* Header & Nav */
+header { text-align: center; margin-bottom: 25px; }
+h1#mainSystemTitle { margin: 0; color: var(--primary-dark); font-weight: 900; font-size: 2.0rem; text-shadow: 0px 0px 15px rgba(59, 130, 246, 0.3); }
+.subtitle { color: var(--text-sub); font-size: 0.9rem; margin-top: 5px; }
+.nav-pills { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; background: white; padding: 6px; border-radius: 50px; box-shadow: var(--shadow-md); width: fit-content; margin-left: auto; margin-right: auto; }
+.nav-item { padding: 8px 20px; border: none; border-radius: 30px; cursor: pointer; font-weight: 600; color: var(--text-sub); background: transparent; transition: all 0.3s; font-size: 0.95rem; }
+.nav-item.active { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; box-shadow: 0 2px 5px rgba(37, 99, 235, 0.3); }
+
+/* UI Components */
+.section { display: none; animation: slideUp 0.3s ease-out; }
+.section.active { display: block; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+.input-group { background: var(--card-bg); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-md); margin-bottom: 15px; border: 1px solid #e0f2fe; }
+.input-group h3 { margin-top: 0; color: var(--primary-dark); border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1.1rem; }
+button { padding: 10px 16px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; color: white; transition: transform 0.1s; font-family: 'Noto Sans TC', sans-serif; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 6px; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+button:active { transform: scale(0.96); }
+.btn-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
+.btn-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.btn-green { background: linear-gradient(135deg, #10b981, #059669); }
+.btn-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.btn-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.btn-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.btn-teal { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+.btn-dark { background: #334155; }
+.btn-gray { background: #94a3b8; }
+.btn-outline { background: white; color: var(--text-sub); border: 2px solid #cbd5e1; box-shadow: none; }
+
+/* Action Bar */
+.action-bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; background: white; padding: 10px; border-radius: 16px; box-shadow: var(--shadow-md); border: 1px solid #e0f2fe; }
+.action-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.divider { width: 1px; background: #e2e8f0; height: 24px; margin: 0 5px; }
+
+/* Pairing Grid */
+.pairing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 15px; margin-top: 15px; }
+.match-card-ui { background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid #e2e8f0; }
+.match-header { background: #f0f9ff; padding: 8px 15px; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub); border-bottom: 1px solid #e0f2fe; }
+.match-content { display: flex; align-items: center; padding: 12px; justify-content: space-between; }
+.player-box { flex: 1; text-align: center; cursor: pointer; padding: 6px; border-radius: 8px; transition: 0.2s; }
+.player-box.selected { background: #fff7ed; border: 2px dashed #f59e0b; }
+.player-num-badge { display: inline-block; font-size: 0.75rem; background: #e2e8f0; color: #64748b; padding: 1px 6px; border-radius: 4px; margin-bottom: 2px; }
+.player-name { font-weight: 800; font-size: 1.2rem; display: block; line-height: 1.2; margin-bottom: 4px; }
+.player-score { font-size: 0.8rem; color: white; background: var(--text-sub); padding: 2px 8px; border-radius: 10px; opacity: 0.9; }
+.vs-area { width: 110px; text-align: center; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.btn-res-group { display: flex; width: 100%; gap: 4px; }
+.btn-res { flex: 1; padding: 10px 0; font-size: 0.9rem; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; color: white; }
+.btn-res-red { background: #ef4444; }
+.btn-res-draw { background: #10b981; }
+.btn-res-black { background: #3b82f6; }
+.result-tag { font-weight: 700; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; display: inline-block; }
+.tag-win { background: #fee2e2; color: #991b1b; }
+.tag-loss { background: #dbeafe; color: #1e40af; }
+.tag-draw { background: #d1fae5; color: #065f46; }
+
+/* Tables */
+.table-container { background: white; border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid #e2e8f0; overflow-x: auto; }
+.modern-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+.modern-table th { background: #f0f9ff; color: var(--text-sub); font-weight: 700; padding: 12px 8px; text-align: center; border-bottom: 2px solid #e0f2fe; font-size: 0.85rem; white-space: nowrap; }
+.modern-table td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 0.95rem; color: var(--text-main); }
+.modern-table tr:nth-child(even) { background-color: #f8fafc; }
+.clickable-name { color: var(--primary); font-weight: bold; cursor: pointer; text-decoration: underline; }
+
+/* Modals */
+.modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+.modal-content { background: white; margin: 5% auto; width: 90%; max-width: 500px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden; animation: popIn 0.3s; }
+@keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-header { background: linear-gradient(135deg, var(--primary), #2563eb); color: white; padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+.modal-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+.close-btn { position: absolute; right: 20px; top: 20px; font-size: 1.5rem; cursor: pointer; color: white; opacity: 0.8; }
+#hPlayerName { font-size: 2.5rem; font-weight: 900; margin-bottom: 5px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+#hPlayerNum { font-size: 1rem; opacity: 0.9; font-weight: 500; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 20px; }
+.history-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+.h-round { background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-right: 10px; font-weight: bold; }
+
+/* 圓圈數字徽章 */
+.circle-badge {
+    display: inline-flex; justify-content: center; align-items: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background-color: #eff6ff; color: #1d4ed8;
+    border: 1px solid #bfdbfe; font-weight: bold;
+    font-size: 0.9rem; margin-right: 8px;
+}
+
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    h1#mainSystemTitle { font-size: 1.5rem; }
+    .pairing-grid { grid-template-columns: 1fr; } 
+    .action-bar { flex-direction: column; } 
+    .action-group { width: 100%; justify-content: space-between; }
+    .divider { display: none; }
+}
+
+/* --- 🖨️ 列印與匯出專用 (V10.12 預設列印樣式) --- */
+#printSection { display: none; }
+.export-canvas-container { background: white; padding: 20px; width: 1000px; box-sizing: border-box; position: absolute; top: 0; left: 0; z-index: -1; }
+
+@media print {
+    body * { visibility: hidden; }
+    .container, .modal { display: none !important; }
+    #printSection, #printSection * { visibility: visible; box-sizing: border-box; }
+    #printSection { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 0; background: white; }
+    
+    /* 預設列印樣式 (針對名次表與成績表) */
+    @page { 
+        size: portrait; 
+        margin: 0; 
+    } 
+    body { 
+        margin: 0; 
+        padding-top: 12mm; 
+        padding-left: 10mm;
+        padding-right: 10mm;
+        padding-bottom: 0;
+    }
+
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    .print-report-table { width: 100%; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; margin-bottom: 5px; border: 2px solid #333; }
+    .print-report-table th { color: white !important; padding: 4px 2px; text-align: center; font-size: 13pt; font-weight: 900; border: 1px solid #999; height: 30px; -webkit-print-color-adjust: exact; }
+    .print-report-table td { padding: 2px 0px; text-align: center; font-size: 16pt; color: #000; border: 1px solid #ccc; font-weight: 900; height: 32px; line-height: 1.1; white-space: nowrap; }
+    .print-report-table tr:nth-child(odd) td { background-color: #ffffff; }
+    .print-report-table tr:nth-child(even) td { background-color: var(--theme-row) !important; -webkit-print-color-adjust: exact; }
+    
+    .win-res { color: #dc2626 !important; font-weight: 900 !important; } .loss-res { color: #2563eb !important; font-weight: 900 !important; } .draw-res { color: #16a34a !important; font-weight: 900 !important; } .bye-res { color: #d63384 !important; font-weight: 900 !important; }
+    .vs-col { color: #94a3b8 !important; font-weight: bold; font-style: italic; }
+    .print-name-cell { font-size: 16pt !important; font-weight: 900 !important; }
+    .rank-score { font-size: 18pt !important; font-weight: 900 !important; }
+    .rank-top { color: #d97706; font-weight: 900; font-size: 16pt; }
+    .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }
+
+    .print-header { text-align: center; padding: 5px 0; border-bottom: 2px solid #ddd; margin-bottom: 5px; }
+    .print-header h1 { font-size: 24pt; color: #111; margin: 0; line-height: 1.1; }
+    .print-footer { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10pt; font-weight: bold; padding: 2px; border-top: 1px solid #ccc; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 id="mainSystemTitle">瑞士制積分編排系統</h1>
+        <div class="subtitle">by 克勞德 </div>
+    </header>
+
+    <div class="nav-pills">
+        <button class="nav-item active" onclick="showSection('setup', this)">設定</button>
+        <button class="nav-item" onclick="showSection('pairing', this)">配對</button>
+        <button class="nav-item" onclick="showSection('standings', this)">名次</button>
+        <button class="nav-item" onclick="showSection('summary', this)">總表</button>
+    </div>
+
+    <!-- 1. 設定區 -->
+    <div id="setup" class="section active">
+                <!-- 緊湊型賽制參數設定 -->
+        <div class="input-group">
+            <h3>⚙️ 賽制參數</h3>
+            <style>
+                /* 緊湊型 Grid 系統 */
+                .compact-grid {
+                    display: grid;
+                    /* 手機版預設 2欄 (田字型)，電腦版自動變 4欄 */
+                    grid-template-columns: 1fr 1fr; 
+                    gap: 10px;
+                    margin-top: 5px;
+                }
+                @media (min-width: 768px) {
+                    .compact-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
+                }
+
+                .compact-card {
+                    background: #fff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 10px;
+                    padding: 8px 12px; /* 縮減內距 */
+                    display: flex;
+                    flex-direction: row; /* 改為橫向排列 */
+                    align-items: center;
+                    justify-content: space-between;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                }
+                
+                /* 左側彩色標籤條 */
+                .compact-card::before {
+                    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+                }
+                .cc-win::before { background: #ef4444; }
+                .cc-draw::before { background: #10b981; }
+                .cc-loss::before { background: #3b82f6; }
+                .cc-rnd::before { background: #8b5cf6; }
+
+                .cc-label {
+                    font-size: 0.85rem; color: #64748b; font-weight: bold;
+                    display: flex; flex-direction: column; line-height: 1.2;
+                }
+                .cc-label span { font-size: 1.2rem; margin-bottom: 2px; } /* Emoji 大小 */
+                
+                .cc-input {
+                    width: 50px;
+                    text-align: right;
+                    font-size: 1.4rem; /* 字體適中 */
+                    font-weight: 900;
+                    border: none;
+                    border-bottom: 2px solid transparent;
+                    background: transparent;
+                    color: #334155;
+                    padding: 0;
+                    font-family: 'Roboto Mono', monospace;
+                    transition: border-color 0.2s;
+                }
+                .cc-input:focus { outline: none; border-bottom-color: var(--primary); }
+                
+                /* 個別數字顏色 */
+                .cc-win .cc-input { color: #dc2626; }
+                .cc-draw .cc-input { color: #059669; }
+                .cc-loss .cc-input { color: #2563eb; }
+            </style>
+
+            <div class="compact-grid">
+                <!-- 勝 -->
+                <div class="compact-card cc-win">
+                    <div class="cc-label"><span>🏆</span>勝局</div>
+                    <input type="number" id="ptWin" value="2" onchange="saveData()" class="cc-input">
+                </div>
+                <!-- 和 -->
+                <div class="compact-card cc-draw">
+                    <div class="cc-label"><span>🤝</span>和局</div>
+                    <input type="number" id="ptDraw" value="1" onchange="saveData()" class="cc-input">
+                </div>
+                <!-- 負 -->
+                <div class="compact-card cc-loss">
+                    <div class="cc-label"><span>🥀</span>敗局</div>
+                    <input type="number" id="ptLoss" value="0" onchange="saveData()" class="cc-input">
+                </div>
+                <!-- 輪數 -->
+                <div class="compact-card cc-rnd">
+                    <div class="cc-label"><span>🧮</span>對手分輪</div>
+                    <input type="number" id="oppScoreRounds" value="5" onchange="saveData()" class="cc-input">
+                </div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <h3>📝 比賽資訊</h3>
+            <div style="margin-bottom:15px;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">比賽名稱</label>
+                <input type="text" id="compTitleInput" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="例如：2025 春季盃" oninput="updateTitleDisplay()" onchange="saveData()">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">🎨 報表色系</label>
+                <select id="themeSelect" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" onchange="saveData()">
+                    <option value="blue" selected>🔵 經典藍</option>
+                    <option value="green">🟢 清新綠</option>
+                    <option value="orange">🟠 活力橘</option>
+                    <option value="purple">🟣 尊爵紫</option>
+                    <option value="teal">⚪ 青碧色</option>
+                    <option value="red">🔴 熱血紅</option>
+                    <option value="gray">⚫ 簡約灰</option>
+                </select>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div><label>👮裁判長</label><input type="text" id="refereeInput" value="王添一" onchange="saveData()" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;"></div>
+                <div><label>📋賽務長</label><input type="text" id="directorInput" value="正胃痛" onchange="saveData()" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;"></div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <h3>👥 選手名單</h3>
+            <textarea id="playerInput" style="width:100%; height:120px; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="1 張三&#10;2 李四"></textarea>
+        </div>
+        <div style="text-align:center; margin-top:20px;">
+            <button class="btn-blue" onclick="initPlayers()" style="width:100%; max-width:300px; padding:12px; font-size:1.1rem;">⚔️ 初始化比賽</button>
+            <br><br>
+            <button class="btn-outline" onclick="document.getElementById('importFile').click()">📂 匯入</button>
+            <input type="file" id="importFile" style="display:none" onchange="importJSON(this)" accept=".json">
+            <button class="btn-outline" onclick="exportJSON()">💾 備份</button>
+            <button class="btn-outline" style="color:red; border-color:red" onclick="resetSystem()">🔄 重置</button>
+        </div>
+    </div>
+
+    <!-- 2. 配對區 -->
+    <div id="pairing" class="section">
+        <div style="display:flex; justify-content:center; align-items:center; gap:20px; margin-bottom:20px;">
+            <button class="btn-gray" style="border-radius:50%; width:40px; height:40px; padding:0;" onclick="changeViewRound(-1)">◀</button>
+            <h2 id="roundTitle" style="margin:0; min-width:100px; text-align:center; color:var(--primary-dark);">第 0 輪</h2>
+            <button class="btn-gray" style="border-radius:50%; width:40px; height:40px; padding:0;" onclick="changeViewRound(1)">▶</button>
+        </div>
+        
+        <div class="action-bar">
+            <div class="action-group">
+                <button class="btn-blue" onclick="generateNextRound()" id="genBtn">⚡ 生成下一輪</button>
+                <button class="btn-red" onclick="deleteLastRound()" id="undoBtn" style="display:none">🔙 刪除</button>
+                <button class="btn-orange" onclick="toggleManualMode()" id="manualModeBtn">🛠️ 調動</button>
+                <button class="btn-dark" onclick="openStatusModal()">🚫 退賽管理</button>
+            </div>
+            <div class="divider"></div>
+            <div class="action-group">
+                <div style="position:relative; display:inline-block">
+                    <button class="btn-teal" onclick="toggleMenu('menuPre')">📄 賽前 ▼</button>
+                    <div id="menuPre" style="display:none; position:absolute; top:100%; left:0; background:white; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:8px; z-index:10; min-width:150px; overflow:hidden;">
+                        <div style="padding:12px; border-bottom:1px solid #eee; cursor:pointer" onclick="printPairingCards()">🪑對陣桌卡(裁切)</div>
+                        <div style="padding:12px; border-bottom:1px solid #eee; cursor:pointer" onclick="printPairingList('pre')">🖨️ 賽前對陣表</div>
+                        <div style="padding:12px; cursor:pointer" onclick="shareImage('pre')">📤 匯出圖片</div>
+                    </div>
+                </div>
+                <div style="position:relative; display:inline-block">
+                    <button class="btn-purple" onclick="toggleMenu('menuPost')">🏆 賽後 ▼</button>
+                    <div id="menuPost" style="display:none; position:absolute; top:100%; right:0; background:white; box-shadow:0 4px 10px rgba(0,0,0,0.2); border-radius:8px; z-index:10; min-width:150px; overflow:hidden;">
+                        <div style="padding:12px; border-bottom:1px solid #eee; cursor:pointer" onclick="printPairingList('post')">🖨️ 賽後成績表 (直)</div>
+                        <div style="padding:12px; cursor:pointer" onclick="shareImage('post')">📤 匯出圖片</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="swapIndicator" style="display:none; background:#333; color:white; padding:10px; border-radius:30px; text-align:center; margin-bottom:10px;"></div>
+        <div id="pairingList" class="pairing-grid"></div>
+    </div>
+    
+    <!-- 3. 名次表 -->
+    <div id="standings" class="section">
+        <div class="btn-row">
+             <button class="btn-blue" onclick="toggleChart()">📊 勝率圖表</button>
+             <button class="btn-orange" onclick="printRankingsPDF()">🖨️ 列印名次</button>
+             <button class="btn-teal" onclick="shareRankingsImg()">📤 匯出圖片</button>
+             <button class="btn-purple" onclick="exportToExcel()">▦ 匯出Excel</button>
+        </div>
+        <div id="statsContainer" style="max-width:400px; margin:0 auto 20px; display:none; background:white; padding:20px; border-radius:12px; box-shadow:var(--shadow-md);">
+            <canvas id="winRateChart"></canvas>
+        </div>
+        <div class="table-container">
+            <table id="rankingTable" class="modern-table">
+                <thead><tr><th>名次</th><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>對戰</th><th>勝局</th><th>後手勝</th><th>後手數</th><th>強對手</th><th width="100">備註</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. 總表 -->
+    <div id="summary" class="section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3>🏆成績總表</h3>
+            <div>
+                <button class="btn-purple" onclick="printSummaryPDF()">🖨️ 列印完整版</button>
+                <button class="btn-teal" onclick="shareSummaryImg()">📤 匯出圖片</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="summaryTable" class="modern-table"></table>
+        </div>
+    </div>
+</div>
+
+<!-- 歷史紀錄彈窗 -->
+<div id="historyModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="close-btn" onclick="document.getElementById('historyModal').style.display='none'">&times;</div>
+            <div id="hPlayerName">選手姓名</div>
+            <div id="hPlayerNum">編號: 0</div>
+        </div>
+        <div class="modal-body">
+            <div style="text-align:right; font-weight:bold; margin-bottom:10px; font-size:1.2rem">選手得分: <span id="hTotalPoints">0</span></div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 退賽彈窗 (含名次顯示) -->
+<div id="statusModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header" style="flex-direction:row; justify-content:space-between; padding:15px;">
+            <span style="font-size:1.2rem;font-weight:bold">退賽管理</span>
+            <span style="cursor:pointer;font-size:1.5rem" onclick="document.getElementById('statusModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div style="background:#fff7ed; padding:10px; border-radius:8px; margin-bottom:10px;">
+                <label>積分低於 </label><input type="number" id="batchScoreInput" style="width:50px"> 分
+                <button class="btn-red" onclick="batchWithdraw()" style="padding:4px 8px; font-size:0.8rem;">批次退賽</button>
+            </div>
+            <div id="statusList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 列印專用區 -->
+<div id="printSection"></div>
+
+<script>
+Chart.register(ChartDataLabels);
+
+let sysData = {
+    title:"瑞士制積分編排系統 V10.12", 
+    pointsConfig:{win:2,draw:1,loss:0}, 
+    players:[], pairings:[], currentRound:0, 
+    signatures:{ref:"",dir:""}, 
+    settings:{ oppScoreRounds:5, themeColor: 'blue' }
+};
+let viewingRound = 0;
+let winRateChart = null;
+let isManualMode = false;
+let swapSource = null;
+
+// 列印色系
+const printThemes = {
+    blue:   { head: '#1e40af', row: '#eff6ff' }, 
+    green:  { head: '#047857', row: '#ecfdf5' }, 
+    orange: { head: '#c2410c', row: '#fff7ed' }, 
+    purple: { head: '#7e22ce', row: '#f3e8ff' }, 
+    teal:   { head: '#0f766e', row: '#f0fdfa' }, 
+    red:    { head: '#b91c1c', row: '#fef2f2' }, 
+    gray:   { head: '#334155', row: '#f1f5f9' }  
+};
+
+window.onload = function(){
+    const saved = localStorage.getItem('swiss_v10_11');
+    if(saved){
+        try {
+            sysData = JSON.parse(saved);
+            updateUI();
+            viewingRound = sysData.currentRound;
+            if(sysData.currentRound>0) renderPairingList();
+            document.getElementById('ptWin').value = sysData.pointsConfig.win;
+            document.getElementById('ptDraw').value = sysData.pointsConfig.draw;
+            document.getElementById('ptLoss').value = sysData.pointsConfig.loss;
+            document.getElementById('oppScoreRounds').value = sysData.settings.oppScoreRounds || 5;
+            document.getElementById('themeSelect').value = sysData.settings.themeColor || 'blue';
+            if(sysData.signatures){
+                document.getElementById('refereeInput').value = sysData.signatures.ref;
+                document.getElementById('directorInput').value = sysData.signatures.dir;
+            }
+        } catch(e) { console.error(e); }
+    }
+    updateButtonsState();
+    updateTitleDisplay();
+    window.onclick = function(event) {
+        if (!event.target.matches('.btn-teal') && !event.target.matches('.btn-purple')) {
+            document.getElementById('menuPre').style.display = "none";
+            document.getElementById('menuPost').style.display = "none";
+        }
+    }
+};
+
+function saveData(){
+    sysData.pointsConfig = {
+        win: parseFloat(document.getElementById('ptWin').value)||2,
+        draw: parseFloat(document.getElementById('ptDraw').value)||1,
+        loss: parseFloat(document.getElementById('ptLoss').value)||0
+    };
+    sysData.settings.oppScoreRounds = parseInt(document.getElementById('oppScoreRounds').value)||5;
+    sysData.settings.themeColor = document.getElementById('themeSelect').value; 
+    sysData.signatures = {ref:document.getElementById('refereeInput').value, dir:document.getElementById('directorInput').value};
+    sysData.title = document.getElementById('compTitleInput').value.trim() || sysData.title;
+    localStorage.setItem('swiss_v10_11', JSON.stringify(sysData));
+    updateTitleDisplay();
+}
+function updateTitleDisplay() {
+    const t = document.getElementById('compTitleInput').value.trim() || "瑞士制積分編排系統 V10.12";
+    document.getElementById('mainSystemTitle').innerText = t; document.title = t; 
+}
+function toggleMenu(id) {
+    let m = document.getElementById(id); let d = m.style.display;
+    document.getElementById('menuPre').style.display = "none"; document.getElementById('menuPost').style.display = "none";
+    m.style.display = (d === 'none') ? 'block' : 'none';
+}
+function showSection(id, btn){
+    document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(btn) btn.classList.add('active');
+    if(id==='standings') { updateRankings(); renderStatsChart(); }
+    if(id==='summary') renderSummaryTable();
+    if(id==='pairing') { if(sysData.currentRound>0) renderPairingList(); updateButtonsState(); }
+    if(id!=='pairing' && isManualMode) toggleManualMode();
+}
+
+function resetSystem(){
+    if(!confirm("⚠️ 確定重置？所有資料將消失！")) return;
+    sysData={title:"瑞士制積分編排系統 V10.12",pointsConfig:{win:2,draw:1,loss:0},players:[],pairings:[],currentRound:0,signatures:{ref:"",dir:""},settings:{oppScoreRounds:5, themeColor:'blue'}};
+    viewingRound=0; localStorage.removeItem('swiss_v10_11'); location.reload();
+}
+function initPlayers(){
+    const t = document.getElementById('compTitleInput').value.trim();
+    const txt = document.getElementById('playerInput').value.trim();
+    if(!txt) return alert('請輸入選手');
+    sysData.title = t || "瑞士制比賽";
+    const ns = txt.split('\n').map(n=>n.replace(/^\d+[\.\s、]*/, '').trim()).filter(n=>n);
+    if(ns.length<2) return alert('至少2人');
+    sysData.players = ns.map((n,i)=>({id:i+1, number:i+1, name:n, points:0, opponentPoints:0, opponents:[], colors:[], results:[], isBye:false, isWithdrawn:false, rankNote: "" }));
+    if(sysData.players.length % 2 !== 0) sysData.players.push({ id:sysData.players.length+1, number:sysData.players.length+1, name:"輪空", points:-1, opponentPoints:0, opponents:[], colors:[], results:[], isBye:true, isWithdrawn:false, rankNote: "" });
+    sysData.currentRound=0; viewingRound=0; sysData.pairings=[];
+    saveData(); updateUI(); alert(`已初始化 ${sysData.players.length} 位選手`); showSection('pairing', document.querySelectorAll('.nav-item')[1]);
+}
+function updateUI(){
+    if(sysData.players.length>0){
+        document.getElementById('playerInput').value = sysData.players.filter(p=>!p.isBye).map(p=>`${p.number} ${p.name}`).join('\n');
+        document.getElementById('compTitleInput').value = sysData.title;
+    }
+}
+function changeViewRound(delta) {
+    let newRound = viewingRound + delta;
+    if (newRound < 1 || newRound > sysData.currentRound) return;
+    viewingRound = newRound;
+    if(isManualMode) toggleManualMode();
+    renderPairingList(); updateButtonsState();
+}
+
+function setRes(wId, r){ 
+    let p = sysData.pairings.find(x => x.round===viewingRound && x.white.number===wId); 
+    if(p){ 
+        p.result = r; 
+        updateScores(); 
+        saveData(); 
+        renderPairingList(); 
+    } 
+}
+
+function generateNextRound(){
+    if(viewingRound !== sysData.currentRound && sysData.currentRound > 0) return alert("請先切換至最新一輪");
+    if(sysData.currentRound > 0){ 
+        const unfinished = sysData.pairings.filter(p => p.round <= sysData.currentRound && p.result === null);
+        if(unfinished.length > 0) {
+            return alert(`第 ${unfinished[0].round} 輪還有成績未填寫！請檢查所有輪次。`);
+        }
+    }
+    updateScores();
+    sysData.currentRound++; viewingRound = sysData.currentRound; const rd = sysData.currentRound;
+    let pairings = []; let active = sysData.players.filter(p=>!p.isBye && !p.isWithdrawn);
+    if(rd === 1) {
+        active.sort((a,b) => a.number - b.number);
+        if(active.length % 2 !== 0) pairings.push({round:rd, white:active.pop(), black:sysData.players.find(p=>p.isBye), result:1});
+        while(active.length > 0) { let p1 = active.shift(); let p2 = active.shift(); if(p2) pairings.push({round:rd, white:p1, black:p2, result:null}); }
+    } else {
+        active.sort((a,b)=>(b.points-a.points)||(b.opponentPoints-a.opponentPoints)||(a.number-b.number));
+        if(active.length % 2 !== 0){
+            let byeIdx = active.length-1;
+            for(let i=active.length-1; i>=0; i--){ if(!active[i].results.includes("輪空勝")) { byeIdx = i; break; } }
+            pairings.push({round:rd, white:active.splice(byeIdx, 1)[0], black:sysData.players.find(p=>p.isBye), result:1});
+        }
+        while(active.length > 0){
+            let p1 = active.shift(); let bestOppIdx = -1; let minPenalty = Infinity;
+            for(let i=0; i<active.length; i++){
+                let p2 = active[i]; if(p1.opponents.includes(p2.number)) continue;
+                let penalty = Math.abs(p1.points - p2.points) * 10;
+                let t1 = getColorTrend(p1), t2 = getColorTrend(p2);
+                if((t1===1&&t2===1)||(t1===-1&&t2===-1)) penalty += 1000;
+                let bal1 = (p1.colors.filter(c=>c==='先').length) - (p1.colors.filter(c=>c==='後').length);
+                let bal2 = (p2.colors.filter(c=>c==='先').length) - (p2.colors.filter(c=>c==='後').length);
+                if (bal1 * bal2 > 0) penalty += 5;
+                if (penalty < minPenalty) { minPenalty = penalty; bestOppIdx = i; }
+                if (penalty === 0) break;
+            }
+            if(bestOppIdx === -1 && active.length > 0) bestOppIdx = 0;
+            if(bestOppIdx !== -1) { let p2 = active.splice(bestOppIdx, 1)[0]; let asgn = assignColors(p1, p2); pairings.push({round:rd, white:asgn.w, black:asgn.b, result:null}); }
+        }
+    }
+    sysData.pairings.push(...pairings); saveData(); renderPairingList(); updateButtonsState();
+}
+function getColorTrend(p) { if(p.colors.length<2)return 0; let l1=p.colors[p.colors.length-1], l2=p.colors[p.colors.length-2]; return (l1==='先'&&l2==='先')?1:(l1==='後'&&l2==='後')?-1:0; }
+function assignColors(p1, p2) {
+    let r1=p1.colors.filter(c=>c==='先').length, b1=p1.colors.filter(c=>c==='後').length;
+    let r2=p2.colors.filter(c=>c==='先').length, b2=p2.colors.filter(c=>c==='後').length;
+    let t1=getColorTrend(p1), t2=getColorTrend(p2);
+    if(t1===1||t2===-1) return {w:p2,b:p1}; if(t1===-1||t2===1) return {w:p1,b:p2};
+    if((r1-b1)>(r2-b2)) return {w:p2,b:p1}; if((r2-b2)>(r1-b1)) return {w:p1,b:p2};
+    return (p1.colors[p1.colors.length-1]==='先') ? {w:p2,b:p1} : {w:p1,b:p2};
+}
+function deleteLastRound(){ if(sysData.currentRound===0||!confirm("刪除最新一輪？"))return; sysData.pairings=sysData.pairings.filter(p=>p.round<sysData.currentRound); sysData.currentRound--; viewingRound=sysData.currentRound||0; updateScores(); saveData(); renderPairingList(); updateButtonsState(); }
+function updateScores(){
+    const W=sysData.pointsConfig.win, D=sysData.pointsConfig.draw, L=sysData.pointsConfig.loss;
+    sysData.players.forEach(p=>{ p.points=0; p.opponents=[]; p.colors=[]; p.results=[]; });
+    sysData.pairings.forEach(p=>{
+        if(p.result===null)return; let w=sysData.players.find(x=>x.number===p.white.number), b=sysData.players.find(x=>x.number===p.black.number);
+        if(w&&b){ w.opponents.push(b.number); b.opponents.push(w.number); w.colors.push('先'); b.colors.push('後'); 
+        if(p.black.isBye){ w.points+=W; w.results.push('勝'); }
+        else { if(p.result===1){w.points+=W;b.points+=L;w.results.push('勝');b.results.push('負');} else if(p.result===0.5){w.points+=D;b.points+=D;w.results.push('和');b.results.push('和');} else{w.points+=L;b.points+=W;w.results.push('負');b.results.push('勝');} } }
+    });
+    const cr = sysData.settings.oppScoreRounds||5;
+    sysData.players.forEach(p=>{ p.opponentPoints = p.opponents.map(o=>{ let op=sysData.players.find(x=>x.number===o); return (op&&!op.isBye)?op.points:0; }).sort((a,b)=>b-a).slice(0,cr).reduce((a,c)=>a+c,0); });
+    sysData.players.forEach(p=>{ p.sSOS = p.opponents.reduce((a,o)=>{ let op=sysData.players.find(x=>x.number===o); return a+((op&&!op.isBye)?op.opponentPoints:0); },0); });
+}
+function calcScoreBeforeRound(num, tr) {
+    let tot=0, W=sysData.pointsConfig.win, D=sysData.pointsConfig.draw, L=sysData.pointsConfig.loss;
+    sysData.pairings.forEach(p=>{ if(p.round < tr && p.result!==null){ if(p.white.number===num){ tot+=(p.black.isBye||p.result===1)?W:(p.result===0.5?D:L); } else if(p.black.number===num){ tot+=(p.result===0)?W:(p.result===0.5?D:L); } } });
+    return tot;
+}
+
+function renderPairingList(){
+    const listDiv = document.getElementById('pairingList');
+    const title = document.getElementById('roundTitle');
+    if(viewingRound === 0) { title.innerText = "準備中"; listDiv.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#9ca3af;grid-column:1/-1">請點擊「生成下一輪」開始比賽</div>'; return; }
+    let isCurrent = (viewingRound === sysData.currentRound);
+    title.innerText = `第 ${viewingRound} 輪` + (isCurrent ? "" : " (歷史)");
+    let pairs = sysData.pairings.filter(p=>p.round === viewingRound);
+    pairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
+    listDiv.innerHTML = '';
+    pairs.forEach((p, idx) => {
+        let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, viewingRound);
+        let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, viewingRound);
+        const card = document.createElement('div'); card.className = 'match-card-ui';
+        let centerHTML = '';
+        if(p.result === null) {
+            if(!p.black.isBye && !isManualMode) {
+                centerHTML = `<div class="vs-area"><div class="btn-res-group"><button class="btn-res btn-res-red" onclick="setRes(${p.white.number},1)">紅</button><button class="btn-res btn-res-draw" onclick="setRes(${p.white.number},0.5)">和</button><button class="btn-res btn-res-black" onclick="setRes(${p.white.number},0)">黑</button></div></div>`;
+            } else { centerHTML = `<div class="vs-area"><div style="font-style:italic;font-weight:900;color:#cbd5e1;font-size:1.5rem;">VS</div></div>`; }
+        } else {
+            let resT='', tagC='';
+            if(p.black.isBye) { resT="輪空勝"; tagC="tag-draw"; }
+            else if(p.result===1) { resT="紅勝"; tagC="tag-win"; }
+            else if(p.result===0.5) { resT="和局"; tagC="tag-draw"; }
+            else { resT="黑勝"; tagC="tag-loss"; }
+            centerHTML = `<div class="vs-area"><span class="result-tag ${tagC}">${resT}</span>` + (!isManualMode ? `<small style="color:#999;cursor:pointer;text-decoration:underline;margin-top:5px" onclick="setRes(${p.white.number},null)">重填</small>`:'') + `</div>`;
+        }
+        let wClick = isManualMode ? `onclick="handleManualSelect(${idx}, true)"` : '';
+        let bClick = isManualMode ? `onclick="handleManualSelect(${idx}, false)"` : '';
+        let selW = (swapSource && swapSource.pairingIdx===idx && swapSource.isWhite) ? 'selected' : '';
+        let selB = (swapSource && swapSource.pairingIdx===idx && !swapSource.isWhite) ? 'selected' : '';
+        card.innerHTML = `<div class="match-header"><span>第 ${idx+1} 桌</span><span style="font-weight:bold;color:var(--primary)">ROUND ${viewingRound}</span></div><div class="match-content"><div class="player-box ${selW}" ${wClick}><span class="player-num-badge">#${p.white.number}</span><span class="player-name" style="color:#dc2626">${p.white.name}</span><span class="player-score">${wPts}分</span></div>${centerHTML}<div class="player-box ${selB}" ${bClick}>${p.black.isBye ? '' : `<span class="player-num-badge">#${p.black.number}</span>`}<span class="player-name" style="color:#1e3a8a">${p.black.isBye?'輪空':p.black.name}</span><span class="player-score">${bPts}分</span></div></div>`;
+        listDiv.appendChild(card);
+    });
+}
+
+function toggleManualMode() {
+    if(viewingRound !== sysData.currentRound) return alert("只能在最新一輪進行調整");
+    isManualMode = !isManualMode; swapSource = null;
+    const btn = document.getElementById('manualModeBtn');
+    const ind = document.getElementById('swapIndicator');
+    if(isManualMode) { btn.innerHTML = "✅ 完成"; btn.className = "btn-green"; ind.style.display = 'block'; ind.innerText = "請點擊第一位選手..."; }
+    else { btn.innerHTML = "🛠️ 調動"; btn.className = "btn-orange"; ind.style.display = 'none'; }
+    renderPairingList();
+}
+function handleManualSelect(pIdx, isWhite) {
+    if(!isManualMode) return;
+    if(!swapSource) { swapSource = { pairingIdx: pIdx, isWhite: isWhite }; document.getElementById('swapIndicator').innerText = "已選取一位，請選第二位..."; renderPairingList(); return; }
+    if(swapSource.pairingIdx === pIdx && swapSource.isWhite === isWhite) { swapSource = null; document.getElementById('swapIndicator').innerText = "已取消。請重新選擇..."; renderPairingList(); return; }
+    let pairs = sysData.pairings.filter(p=>p.round === viewingRound);
+    pairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
+    let pSrc = pairs[swapSource.pairingIdx], pTgt = pairs[pIdx];
+    let playerSrc = swapSource.isWhite ? pSrc.white : pSrc.black;
+    let playerTgt = isWhite ? pTgt.white : pTgt.black;
+    if(swapSource.isWhite) pSrc.white = playerTgt; else pSrc.black = playerTgt;
+    if(isWhite) pTgt.white = playerSrc; else pTgt.black = playerSrc;
+    pSrc.result=null; pTgt.result=null;
+    saveData(); swapSource=null; document.getElementById('swapIndicator').innerText = "交換成功！"; renderPairingList();
+}
+
+function updateButtonsState(){ const isLatest = (viewingRound === sysData.currentRound); document.getElementById('genBtn').style.display = isLatest ? 'inline-block' : 'none'; document.getElementById('manualModeBtn').style.display = isLatest ? 'inline-block' : 'none'; document.getElementById('undoBtn').style.display = (isLatest && sysData.currentRound>0) ? 'inline-block' : 'none'; }
+function getH2HWinner(p1, p2) { let idx = p1.opponents.indexOf(p2.number); if (idx === -1) return 0; return p1.results[idx] === '勝' ? -1 : (p1.results[idx] === '負' ? 1 : 0); }
+function updatePlayerNote(num, val) { let p = sysData.players.find(x => x.number === num); if (p) { p.rankNote = val; saveData(); } }
+function updateRankings(){
+    updateScores();
+    sysData.players.forEach(p=>{ p.wins = p.results.filter(r=>r==='勝').length; p.bWins = 0; p.bCnt = 0; p.opponents.forEach((o,i)=>{ if(p.colors[i]==='後') { p.bCnt++; if(p.results[i]==='勝') p.bWins++; } }); });
+    let s = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> {
+        if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
+        let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h;
+        if(b.wins !== a.wins) return b.wins - a.wins; if(b.bWins !== a.bWins) return b.bWins - a.bWins; if(b.bCnt !== a.bCnt) return b.bCnt - a.bCnt;
+        return b.sSOS - a.sSOS;
+    });
+    s.forEach(p => p.h2hDisplay = ""); 
+    for (let i = 0; i < s.length; i++) {
+        let group = [s[i]]; for (let j = i + 1; j < s.length; j++) { if (s[j].points === s[i].points && s[j].opponentPoints === s[i].opponentPoints) group.push(s[j]); else break; }
+        if (group.length > 1) { group.forEach(p1 => { let texts = []; group.forEach(p2 => { if (p1 !== p2) { let idx = p1.opponents.indexOf(p2.number); if (idx !== -1) { let res = p1.results[idx]; let style = res==='勝'?"color:#dc2626":res==='負'?"color:#2563eb":"color:#047857"; texts.push(`<span style="${style};font-weight:bold">${res}${p2.number}</span>`); } } }); p1.h2hDisplay = texts.join(" "); }); i += group.length - 1; }
+    }
+    let tbody = document.querySelector('#rankingTable tbody'); tbody.innerHTML = '';
+    s.forEach((p,i)=>{
+        let tr = document.createElement('tr');
+        let rankD = i<3 ? ['🥇','🥈','🥉'][i] : (i+1);
+        tr.innerHTML = `<td>${rankD}</td><td>${p.number}</td><td><span class="clickable-name" onclick="showPlayerHistory(${p.number})">${p.name}</span></td><td style="font-weight:bold;color:#dc2626">${p.points}</td><td>${p.opponentPoints}</td><td>${p.h2hDisplay}</td><td>${p.wins}</td><td>${p.bWins}</td><td>${p.bCnt}</td><td>${p.sSOS}</td><td>${p.isWithdrawn?'(退)':''} <input type="text" value="${p.rankNote||''}" onchange="updatePlayerNote(${p.number}, this.value)" style="width:60px;border:none;background:transparent"></td>`;
+        tbody.appendChild(tr);
+    });
+}
+function showPlayerHistory(n) {
+    updateScores(); let p = sysData.players.find(x=>x.number===n); if(!p) return;
+    document.getElementById('hPlayerName').innerText = p.name; document.getElementById('hPlayerNum').innerText = p.number; document.getElementById('hTotalPoints').innerText = p.points;
+    let html = '';
+    p.opponents.forEach((o, i) => {
+        let op = sysData.players.find(x=>x.number===o);
+        let opName = op ? (op.isBye ? "輪空" : `<span class="circle-badge">${op.number}</span> ${op.name} <small>(${op.points}分)</small>`) : "未知";
+        let res = p.results[i]; let resClass = res==='勝'?'tag-win':(res==='負'?'tag-loss':'tag-draw');
+        html += `<div class="history-item"><span class="h-round">第${i+1}輪</span><div style="flex:1">${opName}</div><div style="width:30px">${p.colors[i]}</div><div style="width:50px;text-align:right"><span class="result-tag ${resClass}" style="padding:2px 8px;font-size:0.8rem">${res}</span></div></div>`;
+    });
+    document.getElementById('historyList').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無紀錄</div>';
+    document.getElementById('historyModal').style.display='block';
+}
+function toggleChart() { const c = document.getElementById('statsContainer'); c.style.display = (c.style.display === 'none' || c.style.display === '') ? 'block' : 'none'; if(c.style.display === 'block') renderStatsChart(); }
+function renderStatsChart() {
+    let rw=0, bw=0, dr=0; sysData.pairings.forEach(p => { if(p.result===1 && !p.black.isBye) rw++; else if(p.result===0 && !p.black.isBye) bw++; else if(p.result===0.5) dr++; });
+    const ctx = document.getElementById('winRateChart').getContext('2d'); if (winRateChart) winRateChart.destroy();
+    winRateChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['紅勝', '黑勝', '和局'], datasets: [{ data: [rw, bw, dr], backgroundColor: ['#ef4444', '#3b82f6', '#10b981'] }] }, options: { plugins: { title: { display: true, text: `共 ${rw+bw+dr} 局` }, datalabels: { color: 'white', formatter: (v, ctx) => { let sum = 0; ctx.chart.data.datasets[0].data.map(d => sum+=d); return sum>0 ? (v*100/sum).toFixed(1)+"%" : "0%"; } } } } });
+}
+
+/* 列印模組 - V10.12 完美修正：移植 V8.1 桌卡邏輯 */
+function getThemeColorObj() { const tName = sysData.settings.themeColor || 'blue'; return printThemes[tName] || printThemes['blue']; }
+function getPortraitPrintStyle(theme) {
+    return `<style>
+        @page { size: portrait; margin: 0; }
+        body { margin: 0; padding: 0; }
+        
+        .print-report-table { width: 90%; margin: 20px auto; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; border: 2px solid #333; }
+        
+        .print-report-table th { 
+            background-color: ${theme.head} !important; 
+            color: white !important; 
+            padding: 4px 2px; 
+            text-align: center; 
+            vertical-align: middle !important; /* 確保標題也垂直置中 */
+            font-size: 13pt; 
+            font-weight: 900; 
+            border: 1px solid #999; 
+            height: 30px; 
+            -webkit-print-color-adjust: exact; 
+        }
+
+        /* ↓↓↓↓ 修改這裡 ↓↓↓↓ */
+        .print-report-table td { 
+            padding: 6px 2px; /* 稍微增加上下內距，讓字體有空間 */
+            text-align: center; 
+            vertical-align: middle !important; /* 關鍵：強制垂直置中 */
+            font-size: 16pt; 
+            color: #000; 
+            border: 1px solid #ccc; 
+            font-weight: 900; 
+            height: 36px; /* 稍微加高一點點 */
+            line-height: 1.2; /* 放寬行高，避免字體被壓在下面 */
+            white-space: nowrap; 
+        }
+        /* ↑↑↑↑ 修改結束 ↑↑↑↑ */
+
+        .print-report-table tr:nth-child(odd) td { background-color: #ffffff; }
+        .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; }
+        .print-header { text-align: center; padding: 15px 0 5px 0; border-bottom: 2px solid #ddd; margin: 0 auto 5px auto; width: 90%; }
+        .print-header h1 { font-size: 24pt; color: #111; margin: 0; line-height: 1.1; }
+        .print-footer { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10pt; font-weight: bold; padding: 2px; border-top: 1px solid #ccc; }
+        .win-res { color: #dc2626 !important; font-weight: 900 !important; } .loss-res { color: #2563eb !important; font-weight: 900 !important; } .draw-res { color: #16a34a !important; font-weight: 900 !important; } .bye-res { color: #d63384 !important; font-weight: 900 !important; }
+        .vs-col { color: #94a3b8 !important; font-weight: bold; font-style: italic; }
+        .print-name-cell { font-size: 16pt !important; font-weight: 900 !important; }
+        .rank-score { font-size: 18pt !important; font-weight: 900 !important; }
+        .rank-top { color: #d97706; font-weight: 900; font-size: 16pt; }
+        .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }
+    </style>`;
+}
+
+function getPairingListHTML(mode) {
+    const pairs = sysData.pairings.filter(p=>p.round === viewingRound);
+    pairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
+    const theme = getThemeColorObj();
+    let h = getPortraitPrintStyle(theme) + `
+    <div class="print-header"><h1>${sysData.title} 第 ${viewingRound} 輪 ${mode==='pre'?'賽前對陣表':'賽後成績表'}</h1></div>
+    <table class="print-report-table">
+        <thead><tr><th width="8%">桌次</th><th width="8%">編號</th><th width="25%">紅方 (先)</th><th width="6%">分</th><th width="12%">結果</th><th width="6%">分</th><th width="8%">編號</th><th width="25%">黑方 (後)</th></tr></thead>
+        <tbody>`;
+    pairs.forEach((p,i)=>{
+        let res = mode==='pre'?"VS":""; let resClass = "vs-col";
+        if(mode==='post' && p.result!==null){
+            if(p.result===1){res="紅勝";resClass="win-res";} else if(p.result===0.5){res="和局";resClass="draw-res";} else if(p.result===0){res="黑勝";resClass="loss-res";}
+        }
+        if(p.black.isBye){res="輪空";resClass="bye-res";}
+        let wPts = p.white.isBye?'':calcScoreBeforeRound(p.white.number, mode==='pre'?viewingRound:viewingRound+1);
+        let bPts = p.black.isBye?'':calcScoreBeforeRound(p.black.number, mode==='pre'?viewingRound:viewingRound+1);
+        h += `<tr><td>${i+1}</td><td>${p.white.number}</td><td class="print-name-cell">${p.white.name}</td><td class="rank-score export-red-text">${wPts}</td><td class="${resClass}" style="font-size:13pt">${res}</td><td class="rank-score export-red-text">${bPts}</td><td>${p.black.isBye?'':p.black.number}</td><td class="print-name-cell">${p.black.isBye?'輪空':p.black.name}</td></tr>`;
+    });
+    h += `</tbody></table><div class="print-footer"><span>裁判長：${sysData.signatures.ref}</span><span>列印時間：${new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'})}</span><span>賽務長：${sysData.signatures.dir}</span></div>`;
+    return h;
+}
+
+function getRankingsHTML() {
+    updateRankings();
+    let s = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> {
+        if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
+        let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h; if(b.wins !== a.wins) return b.wins - a.wins; return b.sSOS - a.sSOS;
+    });
+    const theme = getThemeColorObj();
+    let h = getPortraitPrintStyle(theme) + `
+    <div class="print-header"><h1>${sysData.title} 名次表</h1></div>
+    <table class="print-report-table">
+        <thead><tr><th width="6%">名次</th><th width="6%">編號</th><th width="16%">姓名</th><th width="8%">積分</th><th width="8%">對手分</th><th width="8%">對戰</th><th width="8%">勝局</th><th width="8%">後勝</th><th width="8%">後數</th><th width="8%">強對手</th><th width="16%">備註</th></tr></thead><tbody>`;
+    s.forEach((p,i)=>{
+        let rankDisplay = i===0?"🥇 1":(i===1?"🥈 2":(i===2?"🥉 3":i+1));
+        let rankClass = i<3?"rank-top":"";
+        h += `<tr><td class="${rankClass}">${rankDisplay}</td><td>${p.number}</td><td class="print-name-cell">${p.name}</td><td class="rank-score export-red-text">${p.points}</td><td>${p.opponentPoints}</td><td>${p.h2hDisplay}</td><td>${p.wins}</td><td>${p.bWins}</td><td>${p.bCnt}</td><td>${p.sSOS}</td><td style="font-size:12pt">${(p.rankNote||"")+(p.isWithdrawn?"(退)":"")}</td></tr>`;
+    });
+    h += `</tbody></table><div class="print-footer"><span>裁判長：${sysData.signatures.ref}</span><span>列印時間：${new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'})}</span><span>賽務長：${sysData.signatures.dir}</span></div>`;
+    return h;
+}
+
+function getSummaryHTML() {
+    updateScores(); let trs = sysData.currentRound || 1; const theme = getThemeColorObj();
+    let h = `<style>@page { size: landscape; margin: 5mm; } .print-report-table { width: 100%; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; margin-bottom: 5px; border: 2px solid #333; } .print-report-table th { background-color: ${theme.head} !important; color: white !important; padding: 4px 2px; text-align: center; font-size: 12pt; font-weight: 900; border: 1px solid #999; height: 28px; -webkit-print-color-adjust: exact; } .print-report-table td { padding: 1px 0px; text-align: center; font-size: 13.5pt; color: #000; border: 1px solid #ccc; font-weight: 600; height: 28px; line-height: 1.1; white-space: nowrap; } .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; } .print-header { text-align: center; padding: 5px 0; border-bottom: 2px solid #ddd; margin-bottom: 5px; } .print-header h1 { font-size: 24pt; color: #111; margin: 0; line-height: 1.1; } .print-footer { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10pt; font-weight: bold; padding: 2px; border-top: 1px solid #ccc; } .print-name-cell { font-size: 16pt !important; font-weight: 900 !important; } .rank-score { font-size: 18pt !important; font-weight: 900 !important; } .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }</style>` + `
+    <div class="print-header"><h1>${sysData.title} 成績總表</h1></div>
+    <table class="print-report-table" style="width:100%">
+        <thead><tr><th colspan="5">基本資料</th>${Array.from({length:trs},(_,i)=>`<th colspan="3">第 ${i+1} 輪</th>`).join('')}</tr>
+        <tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>${Array.from({length:trs},()=>`<th>對手</th><th>先後</th><th>結果</th>`).join('')}</tr></thead><tbody>`;
+    sysData.players.filter(p=>!p.isBye).forEach(p=>{
+        let wCnt = p.colors.filter(c=>c==='先').length;
+        h += `<tr><td>${p.number}</td><td class="print-name-cell">${p.name}</td><td class="rank-score export-red-text">${p.points}</td><td>${p.opponentPoints}</td><td>${wCnt}</td>`;
+        for(let i=0; i<trs; i++){
+            if(i<p.opponents.length){
+                let res = p.results[i];
+                let colorStyle = p.colors[i]==='先' ? "background-color: #ffecd9 !important; -webkit-print-color-adjust: exact;" : "background-color: #dbeafe !important; -webkit-print-color-adjust: exact;";
+                let resStyle = res==='勝'?'color:#dc2626 !important;font-weight:900':(res==='負'?'color:#2563eb !important;font-weight:900':'color:#16a34a !important;font-weight:900');
+                h += `<td>${p.opponents[i]}</td><td style="${colorStyle}">${p.colors[i]}</td><td style="${resStyle}">${res}</td>`;
+            } else h += '<td></td><td></td><td></td>';
+        }
+        h += '</tr>';
+    });
+    h += `</tbody></table><div class="print-footer"><span>裁判長：${sysData.signatures.ref}</span><span>列印時間：${new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'})}</span><span>賽務長：${sysData.signatures.dir}</span></div>`;
+    return h;
+}
+
+function printPairingList(mode) { document.getElementById('printSection').innerHTML = getPairingListHTML(mode); window.print(); }
+function printRankingsPDF() { document.getElementById('printSection').innerHTML = getRankingsHTML(); window.print(); }
+function printSummaryPDF() { document.getElementById('printSection').innerHTML = getSummaryHTML(); window.print(); }
+
+/* --- V10.12 桌卡完美修正 (移植 V8.1 邏輯) --- */
+function printPairingCards(){
+    if(viewingRound===0) return alert("未選擇輪次");
+    
+    // 1. 取得本輪對陣 (排除雙方輪空)
+    const ps = sysData.pairings.filter(p=>p.round===viewingRound && !p.black.isBye && !p.white.isBye);
+    if(ps.length===0) return alert("本輪無有效對陣");
+    
+    // 2. 注入 V8.1 的完美 CSS (Flexbox + A4 Margins)
+    // 這裡強制使用 A4 與 5mm 邊距，並用 !important 覆蓋全域列印設定
+    let css = `<style>
+        @page { size: A4; margin: 5mm; }
+        body { margin: 0 !important; padding: 0 !important; }
+        
+        .print-page { width: 100%; height: 285mm; display: flex; flex-wrap: wrap; align-content: flex-start; page-break-after: always; box-sizing: border-box; }
+        .print-page:last-child { page-break-after: auto; }
+        
+        .match-card { width: 48%; height: 23.5%; border: 1px dashed #999; margin: 1%; padding: 5px; display: flex; flex-direction: column; justify-content: flex-start; box-sizing: border-box; }
+        
+        .card-header-main { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 2px; font-family: "DFKai-SB", serif; }
+        .card-sub-header { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; margin-bottom: 2px; padding: 0 5px; font-family: "DFKai-SB", serif; }
+        
+        .card-table { width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; flex-grow: 1; }
+        .card-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 2px 0; font-family: "DFKai-SB", serif; }
+        
+        .row-player { height: 35%; font-size: 20px; }
+        .row-score { height: 20%; font-size: 18px; }
+        .row-sign { height: 22.5%; font-size: 16px; }
+        .row-result { height: 22.5%; font-size: 16px; }
+        
+        .txt-red { color: red !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+        .txt-black { color: black !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+        .border-mid-thick { border-left: 3px double #000 !important; }
+        .label-cell { font-size: 18px; font-weight: bold; }
+    </style>`;
+    
+    let html = css;
+    
+    // 3. 依照 V8.1 邏輯每 8 張卡片一頁
+    for(let i=0; i<ps.length; i+=8){
+        html += '<div class="print-page">';
+        ps.slice(i, i+8).forEach((p, idx)=>{
+             // 計算桌號 (全域 index + 1)
+             let tableNum = sysData.pairings.filter(x=>x.round===viewingRound).indexOf(p) + 1;
+             
+             html += `<div class="match-card">
+                <div class="card-header-main">${sysData.title}</div>
+                <div class="card-sub-header"><span>第 ${viewingRound} 輪</span><span>第 ${tableNum} 桌</span></div>
+                <table class="card-table">
+                    <colgroup>
+                        <col style="width:10%"><col style="width:10%"><col style="width:15%"><col style="width:15%">
+                        <col style="width:10%"><col style="width:10%"><col style="width:15%"><col style="width:15%">
+                    </colgroup>
+                    <tr class="row-player">
+                        <td class="txt-red label-cell">先</td><td class="txt-red">${p.white.number}</td><td class="txt-red" colspan="2">${p.white.name}</td>
+                        <td class="txt-black label-cell border-mid-thick">後</td><td class="txt-black">${p.black.number}</td><td class="txt-black" colspan="2">${p.black.name}</td>
+                    </tr>
+                    <tr class="row-score">
+                        <td class="txt-red label-cell" colspan="2">積分</td><td class="txt-red" colspan="2">${p.white.points}</td>
+                        <td class="txt-black label-cell border-mid-thick" colspan="2">積分</td><td class="txt-black" colspan="2">${p.black.points}</td>
+                    </tr>
+                    <tr class="row-sign">
+                        <td class="txt-red label-cell">簽名</td><td colspan="3"></td>
+                        <td class="txt-black label-cell border-mid-thick">簽名</td><td colspan="3"></td>
+                    </tr>
+                    <tr class="row-result">
+                        <td class="txt-red label-cell">勝負</td><td colspan="3"></td>
+                        <td class="txt-black label-cell border-mid-thick">勝負</td><td colspan="3"></td>
+                    </tr>
+                </table>
+             </div>`;
+        });
+        html += '</div>';
+    }
+    
+    document.getElementById('printSection').innerHTML = html;
+    window.print();
+}
+
+async function handleImageShare(htmlContent, filename) {
+    const container = document.getElementById('printSection');
+    container.innerHTML = htmlContent; container.className = 'export-canvas-container'; container.style.display = 'block'; 
+    await new Promise(r => setTimeout(r, 300)); 
+    try {
+        const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        container.style.display = 'none';
+        canvas.toBlob(async (blob) => {
+            if (navigator.share && navigator.canShare) { try { const file = new File([blob], filename + ".jpg", { type: "image/jpeg" }); if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; } } catch (err) {} }
+            const link = document.createElement('a'); link.download = filename + '.jpg'; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
+        }, 'image/jpeg', 0.9);
+    } catch (err) { alert("圖片失敗"); container.style.display = 'none'; }
+}
+function shareImage(mode) { if(viewingRound===0)return alert("未選擇輪次"); handleImageShare(getPairingListHTML(mode), `${sysData.title}_R${viewingRound}_${mode==='pre'?'對陣':'成績'}`); }
+function shareRankingsImg() { handleImageShare(getRankingsHTML(), `${sysData.title}_名次表`); }
+function shareSummaryImg() { const container = document.getElementById('printSection'); container.style.width = "1400px"; handleImageShare(getSummaryHTML(), `${sysData.title}_成績總表`); }
+
+function exportToExcel(){
+    updateRankings(); updateScores();
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>`;
+    html += `<h3>${sysData.title} 名次表</h3>`;
+    html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th>名次</th><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>對戰</th><th>勝局</th><th>後手勝</th><th>後手數</th><th>強對手</th><th>備註</th></tr></thead><tbody>`;
+    let s = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> { if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints; let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h; if(b.wins !== a.wins) return b.wins - a.wins; return b.sSOS - a.sSOS; });
+    s.forEach((p,i)=>{ html += `<tr><td>${i+1}</td><td>${p.number}</td><td style="font-weight:bold; font-size:14px">${p.name}</td><td style="color:red; font-weight:bold; font-size:14px">${p.points}</td><td>${p.opponentPoints}</td><td>'${p.h2hDisplay || ""}</td><td>${p.wins}</td><td>${p.bWins}</td><td>${p.bCnt}</td><td>${p.sSOS}</td><td>${p.rankNote||""}</td></tr>`; });
+    html += `</tbody></table><br>`;
+    let trs = sysData.currentRound || 1;
+    html += `<h3>${sysData.title} 成績總表</h3>`;
+    html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th colspan="5">基本資料</th>`;
+    for(let i=1; i<=trs; i++) html += `<th colspan="3">第 ${i} 輪</th>`;
+    html += `</tr><tr style="background-color:#2563eb; color:white;"><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>`;
+    for(let i=1; i<=trs; i++) html += `<th>對手</th><th>先後</th><th>結果</th>`;
+    html += `</tr></thead><tbody>`;
+    sysData.players.filter(p=>!p.isBye).forEach(p => {
+        let wCnt = p.colors.filter(c=>c==='先').length;
+        html += `<tr><td>${p.number}</td><td style="font-weight:bold; font-size:14px">${p.name}</td><td style="color:red; font-weight:bold; font-size:14px">${p.points}</td><td>${p.opponentPoints}</td><td>${wCnt}</td>`;
+        for(let i=0; i<trs; i++){
+            if(i < p.opponents.length){
+                let res = p.results[i]; let color = p.colors[i];
+                let bgStyle = color === '先' ? 'background-color:#ffecd9' : 'background-color:#dbeafe';
+                let fontStyle = res === '勝' ? "color:red; font-weight:bold" : (res === '負' ? "color:blue; font-weight:bold" : "color:green; font-weight:bold");
+                html += `<td>${sysData.players.find(x=>x.number===p.opponents[i])?.isBye?"輪":p.opponents[i]}</td><td style="${bgStyle}">${color}</td><td style="${fontStyle}">${res}</td>`;
+            } else { html += `<td></td><td></td><td></td>`; }
+        }
+        html += `</tr>`;
+    });
+    html += `</tbody></table></body></html>`;
+    const b = new Blob([html], {type:'application/vnd.ms-excel'}); const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `${sysData.title}_報表.xls`; document.body.appendChild(l); l.click(); l.remove();
+}
+
+function exportJSON() {
+    const dataStr = JSON.stringify(sysData, null, 2); // 加入縮排讓檔案可讀性更好
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    // 檔名加入時間戳記，避免手機檔名重複被覆蓋
+    const timeStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
+    link.download = `${sysData.title}_備份_${timeStr}.json`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // 清理資源
+    setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    }, 100);
+}
+function importJSON(input) { const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=function(e){try{sysData=JSON.parse(e.target.result);saveData();location.reload();}catch(err){alert("錯誤");}}; r.readAsText(f); }
+
+/* V10.6 修正：退賽編號改為圓圈 */
+function openStatusModal(){ 
+    let l=document.getElementById('statusList'); l.innerHTML=''; 
+    updateScores();
+    let sortedList = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> {
+        if(b.points !== a.points) return b.points - a.points;
+        if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
+        return b.sSOS - a.sSOS;
+    });
+    sortedList.forEach((p, index)=>{ 
+        let d=document.createElement('div'); 
+        d.style.cssText="padding:8px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center"; 
+        let rankBadge = `<span style="background:#3b82f6;color:white;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-right:5px">第 ${index+1} 名</span>`;
+        // 使用 .circle-badge
+        d.innerHTML=`<span>${rankBadge} <span class="circle-badge">${p.number}</span> ${p.name} <small>(${p.points}分)</small></span> <button class="${p.isWithdrawn?'btn-green':'btn-red'}" onclick="toggleStatus(${p.number})" style="padding:2px 8px;font-size:0.8rem">${p.isWithdrawn?'復歸':'退賽'}</button>`; 
+        l.appendChild(d); 
+    }); 
+    document.getElementById('statusModal').style.display='block'; 
+}
+function toggleStatus(n){ let p=sysData.players.find(x=>x.number===n); if(p){p.isWithdrawn=!p.isWithdrawn;saveData();openStatusModal();} }
+function batchWithdraw(){ let v=parseFloat(document.getElementById('batchScoreInput').value); if(isNaN(v))return; let c=0; sysData.players.forEach(p=>{if(!p.isBye&&!p.isWithdrawn&&p.points<v){p.isWithdrawn=true;c++;}}); if(c>0){saveData();openStatusModal();alert(`已退賽 ${c} 人`);} }
+function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i]; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':'#10b981'); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
+</script>
+</body>
+</html>
