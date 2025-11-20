@@ -235,7 +235,10 @@ button:active { transform: scale(0.96); }
             <h3>👥 選手名單(一行一位)</h3>
             <textarea id="playerInput" style="width:100%; height:120px; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="1 張三&#10;2 李四"></textarea>
         </div>
-        <div style="text-align:center; margin-top:20px;">
+        <div style="text-align:center; margin-bottom:10px;">
+            <button class="btn-primary" onclick="runSeedDraw()" style="width:100%; max-width:300px; padding:12px; font-size:1.1rem;">🎲 種子抽籤</button>
+        </div>
+        <div style="text-align:center; margin-top:10px;">
             <button class="btn-primary" onclick="initPlayers()" style="width:100%; max-width:300px; padding:12px; font-size:1.1rem;">⚔️ 初始化本組賽程</button>
             <br><br>
             <button class="btn-outline" onclick="document.getElementById('importFile').click()">📂 匯入本組</button>
@@ -394,7 +397,20 @@ button:active { transform: scale(0.96); }
         </div>
     </div>
 </div>
-
+<div id="seedReportModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <span style="font-size:1.2rem;font-weight:bold">🎲 抽籤結果報告</span>
+            <span class="close-btn" onclick="document.getElementById('seedReportModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body" id="seedReportContent" style="font-size:0.95rem; line-height:1.6;">
+            <!-- Report content goes here -->
+        </div>
+        <div style="padding:15px; text-align:center; border-top:1px solid #eee;">
+            <button class="btn-primary" onclick="document.getElementById('seedReportModal').style.display='none'">確認並使用</button>
+        </div>
+    </div>
+</div>
 <div id="printSection"></div>
 
 <script>
@@ -1167,6 +1183,325 @@ function openStatusModal(){
 function toggleStatus(n){ let p=sysData.players.find(x=>x.number===n); if(p){p.isWithdrawn=!p.isWithdrawn;saveCurrentGroupData();openStatusModal();} }
 function batchWithdraw(){ let v=parseFloat(document.getElementById('batchScoreInput').value); if(isNaN(v))return; let c=0; sysData.players.forEach(p=>{if(!p.isBye&&!p.isWithdrawn&&p.points<v){p.isWithdrawn=true;c++;}}); if(c>0){saveCurrentGroupData();openStatusModal();alert(`已退賽 ${c} 人`);} }
 function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i]; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':'#10b981'); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
+</script>
+<script>
+/* --- 種子抽籤模組 (移植版) --- */
+
+function runSeedDraw() {
+    const input = document.getElementById('playerInput');
+    const txt = input.value.trim();
+    if (!txt) return alert('請先輸入選手名單');
+
+    // 1. 解析名單 (保留原始名字，移除開頭的數字編號以免混淆)
+    let rawNames = txt.split('\n')
+        .map(n => n.replace(/^\d+[\.\s、]*/, '').trim())
+        .filter(n => n);
+
+    if (rawNames.length < 2) return alert('選手人數不足');
+
+    // 2. 轉換為物件結構
+    let players = rawNames.map((name, i) => ({
+        name: name,
+        originalIndex: i,
+        type: getPlayerType(name),
+        level: getPlayerLevel(name)
+    }));
+
+    // 3. 執行核心抽籤邏輯
+    let result = performSeedDraw(players);
+    
+    // 4. 執行奇偶平衡調整 (針對最高段/S級)
+    let adjustResult = adjustTopPlayerOddEven(result.arrangement);
+    let finalArrangement = adjustResult.arrangement;
+
+    // 5. 更新輸入框 (重新編號)
+    let newText = finalArrangement.map((p, i) => `${i + 1} ${p.name}`).join('\n');
+    input.value = newText;
+
+    // 6. 生成並顯示報告
+    showSeedReportModal(finalArrangement, result.score, adjustResult);
+}
+
+// --- 顯示報告 Modal ---
+function showSeedReportModal(arrangement, score, adjustResult) {
+    let html = '';
+    
+    // 分析統計
+    let danPlayers = arrangement.filter(p => p.type === 'dan');
+    let sPlayers = arrangement.filter(p => p.type === 'letter' && p.level === 'S');
+    
+    html += `<div style="background:#fff7ed; padding:10px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;">
+        <strong>📊 抽籤摘要</strong><br>
+        總人數：${arrangement.length} 人<br>`;
+    
+    if (danPlayers.length > 0) {
+        let maxDan = Math.max(...danPlayers.map(p => p.level));
+        let topCount = danPlayers.filter(p => p.level === maxDan).length;
+        html += `最高段位：${maxDan}段 (${topCount}人) - 已分散<br>`;
+    }
+    if (sPlayers.length > 0) {
+        html += `S級選手：${sPlayers.length}人 - 已分散<br>`;
+    }
+    
+    html += `違規分數：${score} ${score === 0 ? '🎉 (完美)' : ''}</div>`;
+
+    if (adjustResult.adjusted) {
+        html += `<div style="margin-bottom:15px; font-size:0.9rem; color:#d97706;">
+            <strong>⚖️ 奇偶平衡調整</strong><br>
+            ${adjustResult.message.replace(/\n/g, '<br>')}
+        </div>`;
+    }
+
+    html += `<strong>📋 前 10 名預覽 & 檢測：</strong><ul style="padding-left:20px; margin-top:5px;">`;
+    
+    // 檢查前幾名的配對狀況
+    for(let i=0; i<Math.min(arrangement.length, 10); i+=2) {
+        if(i+1 >= arrangement.length) {
+            html += `<li>第 ${i+1} 桌：${arrangement[i].name} (輪空)</li>`;
+            break;
+        }
+        let p1 = arrangement[i], p2 = arrangement[i+1];
+        let warning = "";
+        
+        // 簡單違規檢查
+        let penalty = 0;
+        if (p1.type === 'letter' && p2.type === 'letter') penalty = calculateLetterPenalty(p1.level, p2.level);
+        else if (p1.type === 'dan' && p2.type === 'dan') penalty = calculateDanPenalty(p1.level, p2.level);
+        
+        if(penalty > 0) warning = `<span style="color:red; font-weight:bold; margin-left:5px;">⚠️ 碰撞</span>`;
+        
+        html += `<li>第 ${i/2+1} 桌：${p1.name} vs ${p2.name} ${warning}</li>`;
+    }
+    html += `<li>... (共 ${Math.ceil(arrangement.length/2)} 桌)</li></ul>`;
+    html += `<p style="font-size:0.85rem; color:#666; margin-top:10px;">* 名單已自動更新至輸入框，請點擊「初始化本組賽程」開始比賽。</p>`;
+
+    document.getElementById('seedReportContent').innerHTML = html;
+    document.getElementById('seedReportModal').style.display = 'flex';
+}
+
+// --- 核心邏輯移植區 (保持原算法邏輯) ---
+
+function adjustTopPlayerOddEven(arrangement) {
+    let topPlayers = [];
+    let hasS = arrangement.some(p => p.type === 'letter' && p.level === 'S');
+    let hasDan = arrangement.some(p => p.type === 'dan');
+
+    if (hasS) {
+        arrangement.forEach((p, i) => { if(p.type==='letter' && p.level==='S') topPlayers.push({idx:i, isOdd:(i+1)%2!==0, name:p.name}); });
+    } else if (hasDan) {
+        let maxDan = Math.max(...arrangement.filter(p=>p.type==='dan').map(p=>p.level));
+        arrangement.forEach((p, i) => { if(p.type==='dan' && p.level===maxDan) topPlayers.push({idx:i, isOdd:(i+1)%2!==0, name:p.name}); });
+    }
+
+    if (topPlayers.length === 0) return { arrangement: arrangement, adjusted: false, message: '' };
+
+    let oddCount = topPlayers.filter(p => p.isOdd).length;
+    let evenCount = topPlayers.length - oddCount;
+    
+    if (Math.abs(oddCount - evenCount) <= 1) return { arrangement: arrangement, adjusted: false, message: '' };
+
+    // 需要調整
+    let newArr = [...arrangement];
+    let log = [];
+    let diff = Math.floor(Math.abs(oddCount - evenCount) / 2);
+    let toEven = oddCount > evenCount;
+    
+    let targetPlayers = topPlayers.filter(p => p.isOdd === toEven); // 選出多出來的那一邊
+    
+    for (let i = 0; i < diff && i < targetPlayers.length; i++) {
+        let tIdx = targetPlayers[i].idx;
+        // 嘗試與相鄰交換 (往後或往前)
+        let swapIdx = (tIdx + 1 < newArr.length) ? tIdx + 1 : tIdx - 1;
+        
+        if (swapIdx >= 0 && swapIdx < newArr.length) {
+            [newArr[tIdx], newArr[swapIdx]] = [newArr[swapIdx], newArr[tIdx]];
+            log.push(`位置 ${tIdx+1} (${newArr[swapIdx].name}) 與 ${swapIdx+1} 交換`);
+        }
+    }
+
+    return { arrangement: newArr, adjusted: true, message: `修正奇偶分佈：原奇${oddCount}/偶${evenCount}。\n` + log.join('\n') };
+}
+
+function getPlayerType(name) {
+    if (/[SABCT]$/i.test(name)) return 'letter';
+    if (/(\d+|[一二三四五六七八九十]+)段$/.test(name)) return 'dan';
+    return 'none';
+}
+
+function getPlayerLevel(name) {
+    let type = getPlayerType(name);
+    if (type === 'letter') return name.trim().slice(-1).toUpperCase();
+    if (type === 'dan') {
+        let m = name.match(/(\d+)段$/);
+        if (m) return parseInt(m[1]);
+        let cm = name.match(/([一二三四五六七八九十]+)段$/);
+        if (cm) return chineseNumberToArabic(cm[1]);
+    }
+    return 0;
+}
+
+function chineseNumberToArabic(chinese) {
+    const map = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};
+    if (chinese.length === 1) return map[chinese] || 0;
+    if (chinese.startsWith('十')) return 10 + (map[chinese[1]] || 0);
+    return 0;
+}
+
+function performSeedDraw(players) {
+    let letterP = players.filter(p => p.type === 'letter');
+    let danP = players.filter(p => p.type === 'dan');
+    let otherP = players.filter(p => p.type === 'none');
+    
+    let arrangement;
+    let sPlayers = letterP.filter(p => p.level === 'S');
+
+    if (danP.length > 0) {
+        arrangement = performDistributedDraw(danP, letterP.concat(otherP), 'dan');
+    } else if (sPlayers.length > 0) {
+        arrangement = performDistributedDraw(sPlayers, letterP.filter(p=>p.level!=='S').concat(otherP), 'S');
+    } else if (letterP.length > 0) {
+        arrangement = performLetterDraw(letterP.concat(otherP));
+    } else {
+        arrangement = shuffleArray(players);
+    }
+
+    let score = calculateScore(arrangement);
+    return { arrangement: arrangement, score: score };
+}
+
+// 通用的分散抽籤 (取代原本的 performDanDraw 和 performSDraw)
+function performDistributedDraw(seedPlayers, otherPlayers, mode) {
+    // 找出真正的種子 (最高段 或 S)
+    let topSeeds, lowerSeeds;
+    if (mode === 'dan') {
+        let maxDan = Math.max(...seedPlayers.map(p => p.level));
+        topSeeds = seedPlayers.filter(p => p.level === maxDan);
+        lowerSeeds = seedPlayers.filter(p => p.level < maxDan);
+    } else {
+        topSeeds = seedPlayers; // S級全體
+        lowerSeeds = [];
+    }
+
+    let pool = lowerSeeds.concat(otherPlayers);
+    topSeeds = shuffleArray(topSeeds);
+    pool = shuffleArray(pool);
+
+    let total = topSeeds.length + pool.length;
+    let arrangement = new Array(total);
+    let numSeeds = topSeeds.length;
+
+    if (numSeeds === 0) return shuffleArray(seedPlayers.concat(otherPlayers));
+
+    // 計算間隔
+    let baseInterval = Math.floor(total / numSeeds);
+    let positions = [];
+    let firstPos = Math.random() < 0.5 ? 1 : 2; // 1-based
+
+    // 生成位置
+    for (let i = 0; i < numSeeds; i++) positions.push(firstPos + i * baseInterval);
+
+    // 簡單的邊界與重疊修正
+    for (let i = 1; i < numSeeds; i++) {
+        if (positions[i] <= positions[i-1]) positions[i] = positions[i-1] + 1;
+    }
+    // 確保不超界
+    positions = positions.map(p => Math.min(p, total));
+
+    // 填入種子
+    positions.forEach((pos, i) => {
+        if (!arrangement[pos-1]) arrangement[pos-1] = topSeeds[i];
+        else {
+            // 撞位處理：找最近空位
+            let k = pos-1;
+            while(arrangement[k] && k < total) k++;
+            if (k < total) arrangement[k] = topSeeds[i];
+        }
+    });
+
+    // 填入其他人
+    let pIdx = 0;
+    for (let i = 0; i < total; i++) {
+        if (!arrangement[i]) {
+            arrangement[i] = pool[pIdx++];
+        }
+    }
+    
+    // 移除 undefined (安全網)
+    arrangement = arrangement.filter(x => x);
+
+    // 後續優化 (Monte Carlo Swap)
+    return optimizeArrangement(arrangement, mode);
+}
+
+function performLetterDraw(players) {
+    return optimizeArrangement(shuffleArray(players), 'letter');
+}
+
+function optimizeArrangement(initialArr, mode) {
+    let bestArr = [...initialArr];
+    let bestScore = calculateScore(bestArr);
+    let maxAttempts = 1000;
+
+    for (let i = 0; i < maxAttempts; i++) {
+        if (bestScore === 0) break;
+        let curr = [...bestArr];
+        
+        // 隨機交換兩人 (避開 S 級或最高段位的固定位會更好，但這裡簡單處理隨機交換)
+        let idx1 = Math.floor(Math.random() * curr.length);
+        let idx2 = Math.floor(Math.random() * curr.length);
+        
+        // 限制：不要破壞已經排好的種子結構 (如果是 Dan/S 模式)
+        // 這裡簡化邏輯：如果有違規，專門針對違規點進行交換
+        
+        [curr[idx1], curr[idx2]] = [curr[idx2], curr[idx1]];
+        
+        let score = calculateScore(curr);
+        if (score < bestScore) {
+            bestScore = score;
+            bestArr = curr;
+        }
+    }
+    return bestArr;
+}
+
+function calculateScore(arr) {
+    let score = 0;
+    // 檢查相鄰 (1-2, 3-4...)
+    for (let i = 0; i < arr.length - 1; i += 2) {
+        let p1 = arr[i], p2 = arr[i+1];
+        if (p1.type === 'letter' && p2.type === 'letter') score += calculateLetterPenalty(p1.level, p2.level);
+        else if (p1.type === 'dan' && p2.type === 'dan') score += calculateDanPenalty(p1.level, p2.level);
+    }
+    return score;
+}
+
+function calculateLetterPenalty(l1, l2) {
+    let p = 0;
+    if (l1==='S' && l2==='S') p+=1000;
+    if (l1==='A' && l2==='A') p+=500;
+    if ((l1==='S'&&l2==='A') || (l1==='A'&&l2==='S')) p+=300;
+    if (l1==='T' && l2==='T') p+=200;
+    return p;
+}
+
+function calculateDanPenalty(d1, d2) {
+    let min = Math.min(d1, d2);
+    if (min >= 8) return 2000;
+    if (min >= 7) return 1500;
+    if (min >= 6) return 1000;
+    if (min >= 5) return 700;
+    if (min >= 4) return 400;
+    return 0;
+}
+
+function shuffleArray(array) {
+    let newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+}
 </script>
 <!-- PWA 安裝模組 (V16 專用增強版) -->
 <script>
