@@ -1168,5 +1168,81 @@ function toggleStatus(n){ let p=sysData.players.find(x=>x.number===n); if(p){p.i
 function batchWithdraw(){ let v=parseFloat(document.getElementById('batchScoreInput').value); if(isNaN(v))return; let c=0; sysData.players.forEach(p=>{if(!p.isBye&&!p.isWithdrawn&&p.points<v){p.isWithdrawn=true;c++;}}); if(c>0){saveCurrentGroupData();openStatusModal();alert(`已退賽 ${c} 人`);} }
 function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i]; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':'#10b981'); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
 </script>
+<!-- PWA 支援模組 (單文件版) -->
+<script>
+(function() {
+    // 1. 定義 App 的基本資訊 (Manifest)
+    const manifest = {
+        "name": "瑞士制編排 V16",
+        "short_name": "瑞士制 V16",
+        "start_url": ".",
+        "display": "standalone",
+        "background_color": "#f0f9ff",
+        "theme_color": "#3b82f6",
+        "orientation": "portrait",
+        "icons": [
+            {
+                "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0AQMAAAAniR6WAAAABlBMVEUAADw7gvZiV8/3AAAAAXRSTlMAQObYZgAAADBJREFUWMPt0TEBAAAAwqD1T20JT6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcDYu4AABl6fVmQAAAABJRU5ErkJggg==", 
+                "sizes": "192x192",
+                "type": "image/png"
+            }
+        ]
+    };
+
+    // 2. 將 Manifest 轉為 Blob URL 並注入到 head
+    const stringManifest = JSON.stringify(manifest);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = manifestURL;
+    document.head.appendChild(link);
+
+    // 3. 針對 iOS 的特別設定 (Meta Tags)
+    const metaTags = [
+        {name: 'apple-mobile-web-app-capable', content: 'yes'},
+        {name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent'},
+        {name: 'apple-mobile-web-app-title', content: '瑞士制V16'}
+    ];
+    metaTags.forEach(tag => {
+        const meta = document.createElement('meta');
+        meta.name = tag.name;
+        meta.content = tag.content;
+        document.head.appendChild(meta);
+    });
+
+    // 4. 註冊 Service Worker (讓網頁可以離線執行)
+    // 注意：Service Worker 在沒有 HTTPS 的環境下 (如 file://) 不會運作
+    if ('serviceWorker' in navigator) {
+        const swCode = `
+            const CACHE_NAME = 'swiss-v16-cache';
+            self.addEventListener('install', (e) => {
+                e.waitUntil(
+                    caches.open(CACHE_NAME).then((cache) => {
+                        // 嘗試快取當前頁面
+                        return cache.addAll(['./']);
+                    })
+                );
+                self.skipWaiting();
+            });
+            self.addEventListener('fetch', (e) => {
+                e.respondWith(
+                    caches.match(e.request).then((response) => {
+                        return response || fetch(e.request);
+                    })
+                );
+            });
+        `;
+        
+        const swBlob = new Blob([swCode], {type: 'application/javascript'});
+        const swUrl = URL.createObjectURL(swBlob);
+
+        navigator.serviceWorker.register(swUrl)
+            .then(() => console.log('PWA Service Worker 註冊成功'))
+            .catch((err) => console.log('PWA 註冊失敗 (可能是因為沒有使用 HTTPS):', err));
+    }
+})();
+</script>
 </body>
 </html>
