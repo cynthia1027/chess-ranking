@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>瑞士制積分編排系統 V14.1 (多組別版)</title>
+<title>瑞士制積分編排系統 V14.2 (多組別版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
@@ -30,22 +30,19 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text-main); padding: 0; margin: 0; line-height: 1.6; font-size: 16px; transition: background 0.3s; }
 
-/* 組別切換條 (最上方 - 修正版) */
+/* 組別切換條 */
 .group-bar {
     background: var(--card-bg); padding: 10px 15px; 
-    /* 修改: 置中對齊，移除 space-between */
     display: flex; justify-content: center; align-items: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #e2e8f0;
 }
 .current-group-display { 
     font-weight: 900; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--primary-dark);
-    /* 修改: 增加點擊區域感 */
     padding: 5px 15px; border-radius: 20px; transition: background 0.2s;
 }
 .current-group-display:hover { background: rgba(0,0,0,0.03); }
 .current-group-display:active { opacity: 0.7; background: rgba(0,0,0,0.05); }
 .group-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--primary); display: inline-block; }
-/* .btn-sm class removed/hidden as requested */
 
 .container { max-width: 1200px; margin: 0 auto; padding: 20px; padding-bottom: 60px; }
 
@@ -69,7 +66,7 @@ button:active { transform: scale(0.96); }
 .btn-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
 .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
 
-/* Specific Colors buttons - retained for semantic meaning */
+/* Specific Colors buttons */
 .btn-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
 .btn-green { background: linear-gradient(135deg, #10b981, #059669); }
 .btn-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
@@ -80,13 +77,31 @@ button:active { transform: scale(0.96); }
 .btn-gray { background: #94a3b8; }
 .btn-outline { background: white; color: var(--text-sub); border: 2px solid #cbd5e1; box-shadow: none; }
 
-/* Action Bar */
+/* Action Bar (Modified for V14.2 Mobile Optimization) */
 .action-bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; background: white; padding: 10px; border-radius: 16px; box-shadow: var(--shadow-md); border: 1px solid #e0f2fe; }
 .action-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .divider { width: 1px; background: #e2e8f0; height: 24px; margin: 0 5px; }
 
-/* Pairing Grid */
-.pairing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 15px; margin-top: 15px; }
+/* 手機版按鈕排版優化: 強制轉為 2欄網格 */
+@media (max-width: 600px) {
+    .action-bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 15px; }
+    .action-group { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 10px; }
+    .divider { display: none; }
+    /* 讓按鈕填滿網格 */
+    .action-group button, .action-group > div { width: 100%; margin: 0; }
+    /* 下拉選單按鈕也要填滿 */
+    .action-group > div > button { width: 100%; justify-content: center; }
+}
+
+/* Pairing Grid (Modified for V14.2 Card Fitting) */
+.pairing-grid { 
+    display: grid; 
+    /* 修改: 將最小寬度從 340px 改為 290px，讓手機版能剛好塞入不被裁切 */
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); 
+    gap: 15px; 
+    margin-top: 15px; 
+}
+
 .match-card-ui { background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid #e2e8f0; }
 .match-header { background: #f8fafc; padding: 8px 15px; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub); border-bottom: 1px solid #e0f2fe; }
 .match-content { display: flex; align-items: center; padding: 12px; justify-content: space-between; }
@@ -110,7 +125,6 @@ button:active { transform: scale(0.96); }
 .table-container { background: white; border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid #e2e8f0; overflow-x: auto; }
 .modern-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .modern-table th { background: #f8fafc; color: var(--text-sub); font-weight: 700; padding: 12px 8px; text-align: center; border-bottom: 2px solid #e0f2fe; font-size: 0.85rem; white-space: nowrap; }
-/* 修改: 加入 white-space: nowrap 防止名字斷行 */
 .modern-table td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 0.95rem; color: var(--text-main); white-space: nowrap; }
 .modern-table tr:nth-child(even) { background-color: #f8fafc; }
 .clickable-name { color: var(--primary); font-weight: bold; cursor: pointer; text-decoration: underline; }
@@ -160,14 +174,13 @@ button:active { transform: scale(0.96); }
 </head>
 <body class="theme-blue">
 
-<!-- Group Switching Bar (Modified) -->
+<!-- Group Switching Bar -->
 <div class="group-bar">
     <div class="current-group-display" onclick="openGroupManager()">
         <span class="group-indicator"></span>
         <span id="topGroupName">預設組別</span>
         <span style="font-size:0.8rem; color:#999">▼</span>
     </div>
-    <!-- 重複的按鈕已移除 -->
 </div>
 
 <div class="container">
@@ -189,7 +202,6 @@ button:active { transform: scale(0.96); }
             <h3>📝 當前組別設定</h3>
             <div style="margin-bottom:10px; padding:10px; background:#f8fafc; border-radius:8px; border:1px dashed #ccc;">
                 <label style="font-weight:bold; color:#64748b; font-size:0.9rem;">組別名稱 (顯示於報表)</label>
-                <!-- 修改: 增加 flex-wrap:wrap 防止溢位 -->
                 <div style="display:flex; gap:10px; margin-top:5px; flex-wrap:wrap;">
                     <input type="text" id="compTitleInput" style="flex:1; min-width:180px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;" onchange="saveCurrentGroupData()">
                     <select id="themeSelect" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" onchange="updateThemeFromSelect(); saveCurrentGroupData()">
