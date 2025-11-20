@@ -170,6 +170,65 @@ button:active { transform: scale(0.96); }
     @page { margin: 0; } 
     body { margin: 0; padding-top: 10mm; }
 }
+
+/* --- 動畫特效 (V16 增強版) --- */
+/* 1. 全螢幕過場遮罩 */
+#loadingOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.95); /* 深色背景 */
+    z-index: 9999; display: none;
+    flex-direction: column; justify-content: center; align-items: center;
+    backdrop-filter: blur(5px); color: white;
+}
+
+/* 脈衝圓圈動畫 */
+.spinner-box {
+    position: relative; width: 100px; height: 100px; margin-bottom: 20px;
+}
+.pulse-ring {
+    position: absolute; width: 100%; height: 100%; border-radius: 50%;
+    border: 4px solid var(--primary); opacity: 0;
+    animation: pulseScale 1.5s infinite ease-out;
+}
+.pulse-ring:nth-child(2) { animation-delay: 0.5s; }
+.pulse-ring:nth-child(3) { animation-delay: 1.0s; }
+
+@keyframes pulseScale {
+    0% { transform: scale(0.1); opacity: 1; border-width: 4px; }
+    100% { transform: scale(1.5); opacity: 0; border-width: 0px; }
+}
+
+/* 文字閃爍效果 */
+.loading-text {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 1.5rem; font-weight: bold;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--primary);
+}
+.loading-sub {
+    margin-top: 10px; font-size: 0.9rem; color: #94a3b8;
+}
+
+/* 2. 卡片瀑布流進場動畫 (大場面) */
+@keyframes cardEntrance {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.card-animate-enter {
+    animation: cardEntrance 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    opacity: 0; /* 預設隱藏，等動畫開始 */
+}
+
+/* 3. 輸入成績時的微動特效 (解決全場亂跳問題) */
+@keyframes pulseSmall {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+    100% { transform: scale(1); }
+}
+.card-update-pulse {
+    animation: pulseSmall 0.3s ease-out;
+}
 </style>
 </head>
 <body class="theme-blue">
@@ -258,7 +317,8 @@ button:active { transform: scale(0.96); }
         
         <div class="action-bar">
             <div class="action-group">
-                <button class="btn-blue" onclick="generateNextRound()" id="genBtn">⚡配對新輪</button>
+                <!-- 修改: 使用新的帶動畫配對函式 -->
+                <button class="btn-blue" onclick="generateNextRoundWithEffect()" id="genBtn">⚡配對新輪</button>
                 <button class="btn-red" onclick="deleteLastRound()" id="undoBtn" style="display:none">🔙刪除此輪</button>
                 <button class="btn-orange" onclick="toggleManualMode()" id="manualModeBtn">🛠️調動選手</button>
                 <button class="btn-dark" onclick="openStatusModal()">🚫 退賽管理</button>
@@ -413,6 +473,17 @@ button:active { transform: scale(0.96); }
 </div>
 <div id="printSection"></div>
 
+<!-- 新增: 過場動畫遮罩層 -->
+<div id="loadingOverlay">
+    <div class="spinner-box">
+        <div class="pulse-ring"></div>
+        <div class="pulse-ring"></div>
+        <div class="pulse-ring"></div>
+    </div>
+    <div class="loading-text" id="loadingMainText">SYSTEM PROCESSING</div>
+    <div class="loading-sub" id="loadingSubText">Initializing...</div>
+</div>
+
 <script>
 /* --- Multi-Group System Logic --- */
 const STORE_PREFIX = 'swiss_v13_';
@@ -519,7 +590,7 @@ function switchGroup(groupId) {
     document.querySelector('.group-indicator').style.backgroundColor = `var(--primary)`;
     updateUI();
     viewingRound = sysData.currentRound;
-    if (sysData.currentRound > 0) renderPairingList();
+    if (sysData.currentRound > 0) renderPairingList(true); // Fresh load, animate
     else document.getElementById('pairingList').innerHTML = ''; // clear list
     
     showSection('setup', document.querySelectorAll('.nav-item')[0]); // Reset view to setup
@@ -681,7 +752,7 @@ function showSection(id, btn){
     if(btn) btn.classList.add('active');
     if(id==='standings') { updateRankings(); renderStatsChart(); }
     if(id==='summary') renderSummaryTable();
-    if(id==='pairing') { if(sysData.currentRound>0) renderPairingList(); updateButtonsState(); }
+    if(id==='pairing') { if(sysData.currentRound>0) renderPairingList(true); updateButtonsState(); }
     if(id!=='pairing' && isManualMode) toggleManualMode();
 }
 
@@ -735,7 +806,7 @@ function changeViewRound(delta) {
     if (newRound < 1 || newRound > sysData.currentRound) return;
     viewingRound = newRound;
     if(isManualMode) toggleManualMode();
-    renderPairingList(); updateButtonsState();
+    renderPairingList(true); updateButtonsState();
 }
 
 function setRes(wId, r){ 
@@ -744,7 +815,8 @@ function setRes(wId, r){
         p.result = r; 
         updateScores(); 
         saveCurrentGroupData(); 
-        renderPairingList(); 
+        // 重點修正: 更新成績時不播放進場動畫 (animate=false)，並指定目標卡片(wId)進行微動
+        renderPairingList(false, wId); 
     } 
 }
 
@@ -820,7 +892,7 @@ function generateNextRound(){
     pairings.push(...solvedPairs);
     sysData.pairings.push(...pairings); 
     saveCurrentGroupData(); 
-    renderPairingList(); 
+    renderPairingList(true); 
     updateButtonsState();
 }
 
@@ -833,7 +905,7 @@ function assignColors(p1, p2) {
     if((r1-b1)>(r2-b2)) return {w:p2,b:p1}; if((r2-b2)>(r1-b1)) return {w:p1,b:p2};
     return (p1.colors[p1.colors.length-1]==='先') ? {w:p2,b:p1} : {w:p1,b:p2};
 }
-function deleteLastRound(){ if(sysData.currentRound===0||!confirm("刪除最新一輪？"))return; sysData.pairings=sysData.pairings.filter(p=>p.round<sysData.currentRound); sysData.currentRound--; viewingRound=sysData.currentRound||0; updateScores(); saveCurrentGroupData(); renderPairingList(); updateButtonsState(); }
+function deleteLastRound(){ if(sysData.currentRound===0||!confirm("刪除最新一輪？"))return; sysData.pairings=sysData.pairings.filter(p=>p.round<sysData.currentRound); sysData.currentRound--; viewingRound=sysData.currentRound||0; updateScores(); saveCurrentGroupData(); renderPairingList(true); updateButtonsState(); }
 function updateScores(){
     const W=sysData.pointsConfig.win, D=sysData.pointsConfig.draw, L=sysData.pointsConfig.loss;
     sysData.players.forEach(p=>{ p.points=0; p.opponents=[]; p.colors=[]; p.results=[]; });
@@ -853,7 +925,7 @@ function calcScoreBeforeRound(num, tr) {
     return tot;
 }
 
-function renderPairingList(){
+function renderPairingList(animate = false, highlightNumber = null){
     const listDiv = document.getElementById('pairingList');
     const title = document.getElementById('roundTitle');
     if(viewingRound === 0) { title.innerText = "準備中"; listDiv.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#9ca3af;grid-column:1/-1">請點擊「生成下一輪」開始比賽</div>'; return; }
@@ -865,7 +937,25 @@ function renderPairingList(){
     pairs.forEach((p, idx) => {
         let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, viewingRound);
         let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, viewingRound);
-        const card = document.createElement('div'); card.className = 'match-card-ui';
+        
+        const card = document.createElement('div'); 
+        card.className = 'match-card-ui';
+        
+        // --- V16 優化: 瀑布流動畫控制 ---
+        if (animate) {
+            card.classList.add('card-animate-enter');
+            // 前 12 桌逐一浮現 (0.1s 間隔)，第 13 桌後全部鎖定在 1.2s 出現
+            let delay = 0;
+            if (idx < 12) delay = idx * 0.1; 
+            else delay = 1.2;
+            card.style.animationDelay = `${delay}s`;
+        }
+
+        // --- V16 優化: 單卡微動特效 (解決輸入成績全場亂跳問題) ---
+        if (highlightNumber !== null && (p.white.number === highlightNumber || p.black.number === highlightNumber)) {
+            card.classList.add('card-update-pulse');
+        }
+        
         let centerHTML = '';
         if(p.result === null) {
             if(!p.black.isBye && !isManualMode) {
@@ -895,12 +985,12 @@ function toggleManualMode() {
     const ind = document.getElementById('swapIndicator');
     if(isManualMode) { btn.innerHTML = "✅ 完成"; btn.className = "btn-green"; ind.style.display = 'block'; ind.innerText = "請點擊第一位選手..."; }
     else { btn.innerHTML = "🛠️ 調動"; btn.className = "btn-orange"; ind.style.display = 'none'; }
-    renderPairingList();
+    renderPairingList(false); // 切換模式時保持靜止
 }
 function handleManualSelect(pIdx, isWhite) {
     if(!isManualMode) return;
-    if(!swapSource) { swapSource = { pairingIdx: pIdx, isWhite: isWhite }; document.getElementById('swapIndicator').innerText = "已選取一位，請選第二位..."; renderPairingList(); return; }
-    if(swapSource.pairingIdx === pIdx && swapSource.isWhite === isWhite) { swapSource = null; document.getElementById('swapIndicator').innerText = "已取消。請重新選擇..."; renderPairingList(); return; }
+    if(!swapSource) { swapSource = { pairingIdx: pIdx, isWhite: isWhite }; document.getElementById('swapIndicator').innerText = "已選取一位，請選第二位..."; renderPairingList(false); return; }
+    if(swapSource.pairingIdx === pIdx && swapSource.isWhite === isWhite) { swapSource = null; document.getElementById('swapIndicator').innerText = "已取消。請重新選擇..."; renderPairingList(false); return; }
     let pairs = sysData.pairings.filter(p=>p.round === viewingRound);
     pairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
     let pSrc = pairs[swapSource.pairingIdx], pTgt = pairs[pIdx];
@@ -909,7 +999,7 @@ function handleManualSelect(pIdx, isWhite) {
     if(swapSource.isWhite) pSrc.white = playerTgt; else pSrc.black = playerTgt;
     if(isWhite) pTgt.white = playerSrc; else pTgt.black = playerSrc;
     pSrc.result=null; pTgt.result=null;
-    saveCurrentGroupData(); swapSource=null; document.getElementById('swapIndicator').innerText = "交換成功！"; renderPairingList();
+    saveCurrentGroupData(); swapSource=null; document.getElementById('swapIndicator').innerText = "交換成功！"; renderPairingList(false);
 }
 
 function updateButtonsState(){ const isLatest = (viewingRound === sysData.currentRound); document.getElementById('genBtn').style.display = isLatest ? 'inline-block' : 'none'; document.getElementById('manualModeBtn').style.display = isLatest ? 'inline-block' : 'none'; document.getElementById('undoBtn').style.display = (isLatest && sysData.currentRound>0) ? 'inline-block' : 'none'; }
@@ -1183,6 +1273,47 @@ function openStatusModal(){
 function toggleStatus(n){ let p=sysData.players.find(x=>x.number===n); if(p){p.isWithdrawn=!p.isWithdrawn;saveCurrentGroupData();openStatusModal();} }
 function batchWithdraw(){ let v=parseFloat(document.getElementById('batchScoreInput').value); if(isNaN(v))return; let c=0; sysData.players.forEach(p=>{if(!p.isBye&&!p.isWithdrawn&&p.points<v){p.isWithdrawn=true;c++;}}); if(c>0){saveCurrentGroupData();openStatusModal();alert(`已退賽 ${c} 人`);} }
 function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i]; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':'#10b981'); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
+
+/* --- 新增: 帶動畫效果的配對函式 (V16) --- */
+const loadingMsgs = [
+    "正在計算積分權重...", "分析對手強弱係數...", "檢查同隊迴避規則...", 
+    "正在優化先後手平衡...", "生成對戰組合...", "校驗歷史對戰紀錄..."
+];
+
+async function generateNextRoundWithEffect() {
+    // 檢查原本的錯誤條件 (避免動畫跑了才說不能配對)
+    if(viewingRound !== sysData.currentRound && sysData.currentRound > 0) return alert("請先切換至最新一輪");
+    if(sysData.currentRound > 0){ 
+        const unfinished = sysData.pairings.filter(p => p.round <= sysData.currentRound && p.result === null);
+        if(unfinished.length > 0) return alert(`第 ${unfinished[0].round} 輪還有成績未填寫！`);
+    }
+
+    const overlay = document.getElementById('loadingOverlay');
+    const mainTxt = document.getElementById('loadingMainText');
+    const subTxt = document.getElementById('loadingSubText');
+    
+    // 開始動畫
+    overlay.style.display = 'flex';
+    
+    // 模擬運算過程 (共2秒，讓使用者看清楚文字)
+    let step = 0;
+    const interval = setInterval(() => {
+        mainTxt.innerText = `PAIRING ROUND ${sysData.currentRound + 1}`;
+        subTxt.innerText = loadingMsgs[Math.floor(Math.random() * loadingMsgs.length)];
+        step++;
+    }, 250);
+
+    // 等待 2.0 秒後執行真正的配對
+    await new Promise(r => setTimeout(r, 2000));
+    
+    clearInterval(interval);
+    
+    // 執行原本的核心邏輯
+    generateNextRound(); 
+    
+    // 結束動畫
+    overlay.style.display = 'none';
+}
 </script>
 <script>
 /* --- 種子抽籤模組 (移植版) --- */
