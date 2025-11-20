@@ -113,7 +113,7 @@ button:active { transform: scale(0.96); }
 .vs-area { width: 110px; text-align: center; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .btn-res-group { display: flex; width: 100%; gap: 4px; }
 .btn-res { flex: 1; padding: 10px 0; font-size: 0.9rem; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; color: white; }
-.btn-res-red { background: #ef4444; }
+.btn-res-red { background: #E0115F; }
 .btn-res-draw { background: #10b981; }
 .btn-res-black { background: #3b82f6; }
 .result-tag { font-weight: 700; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; display: inline-block; }
@@ -255,7 +255,7 @@ button:active { transform: scale(0.96); }
         
         <div class="action-bar">
             <div class="action-group">
-                <button class="btn-blue" onclick="generateNextRound()" id="genBtn">⚡配對新輪</button>
+                <button class="btn-blue" onclick="generateNextRound()" id="genBtn">⚡ 生成下一輪</button>
                 <button class="btn-red" onclick="deleteLastRound()" id="undoBtn" style="display:none">🔙 刪除</button>
                 <button class="btn-orange" onclick="toggleManualMode()" id="manualModeBtn">🛠️ 調動</button>
                 <button class="btn-dark" onclick="openStatusModal()">🚫 退賽管理</button>
@@ -867,7 +867,7 @@ function renderPairingList(){
         let bClick = isManualMode ? `onclick="handleManualSelect(${idx}, false)"` : '';
         let selW = (swapSource && swapSource.pairingIdx===idx && swapSource.isWhite) ? 'selected' : '';
         let selB = (swapSource && swapSource.pairingIdx===idx && !swapSource.isWhite) ? 'selected' : '';
-        card.innerHTML = `<div class="match-header"><span>第 ${idx+1} 桌</span><span style="font-weight:bold;color:var(--primary)">ROUND ${viewingRound}</span></div><div class="match-content"><div class="player-box ${selW}" ${wClick}><span class="player-num-badge">#${p.white.number}</span><span class="player-name" style="color:#dc2626">${p.white.name}</span><span class="player-score">${wPts}分</span></div>${centerHTML}<div class="player-box ${selB}" ${bClick}>${p.black.isBye ? '' : `<span class="player-num-badge">#${p.black.number}</span>`}<span class="player-name" style="color:#1e3a8a">${p.black.isBye?'輪空':p.black.name}</span><span class="player-score">${bPts}分</span></div></div>`;
+        card.innerHTML = `<div class="match-header"><span>第 ${idx+1} 桌</span><span style="font-weight:bold;color:var(--primary)">ROUND ${viewingRound}</span></div><div class="match-content"><div class="player-box ${selW}" ${wClick}><span class="player-num-badge">#${p.white.number}</span><span class="player-name" style="color:#FF6347">${p.white.name}</span><span class="player-score">${wPts}分</span></div>${centerHTML}<div class="player-box ${selB}" ${bClick}>${p.black.isBye ? '' : `<span class="player-num-badge">#${p.black.number}</span>`}<span class="player-name" style="color:#1e3a8a">${p.black.isBye?'輪空':p.black.name}</span><span class="player-score">${bPts}分</span></div></div>`;
         listDiv.appendChild(card);
     });
 }
