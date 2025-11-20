@@ -1168,12 +1168,17 @@ function toggleStatus(n){ let p=sysData.players.find(x=>x.number===n); if(p){p.i
 function batchWithdraw(){ let v=parseFloat(document.getElementById('batchScoreInput').value); if(isNaN(v))return; let c=0; sysData.players.forEach(p=>{if(!p.isBye&&!p.isWithdrawn&&p.points<v){p.isWithdrawn=true;c++;}}); if(c>0){saveCurrentGroupData();openStatusModal();alert(`已退賽 ${c} 人`);} }
 function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i]; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':'#10b981'); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
 </script>
-<!-- PWA 支援模組 (單文件版) -->
+<!-- PWA 安裝模組 (V16 專用增強版) -->
 <script>
 (function() {
-    // 1. 定義 App 的基本資訊 (Manifest)
+    // --- 1. 定義高解析度圖示 (Base64) ---
+    // 這是一個藍色的獎盃圖示，讓安裝後的 App 有圖案
+    const iconBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADIAQMAAACXljzdAAAABlBMVEUAkt7///+31gVIAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAK0lEQVRYw+3PMQ0AAAgDsMlHgnV0Mxc76QMWAQAAAAAAAAAAAAAAAADgWwOQeABy1Z7OQAAAAABJRU5ErkJggg=="; 
+    // (註：為了簡潔，上方只放了一個藍色方塊示意。若要精美圖示需更長的Base64，這裡先確保功能正常)
+
+    // --- 2. 動態建立 Manifest ---
     const manifest = {
-        "name": "瑞士制編排 V16",
+        "name": "瑞士制 V16",
         "short_name": "瑞士制 V16",
         "start_url": ".",
         "display": "standalone",
@@ -1181,67 +1186,84 @@ function renderSummaryTable() { updateScores(); let t=document.getElementById('s
         "theme_color": "#3b82f6",
         "orientation": "portrait",
         "icons": [
-            {
-                "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0AQMAAAAniR6WAAAABlBMVEUAADw7gvZiV8/3AAAAAXRSTlMAQObYZgAAADBJREFUWMPt0TEBAAAAwqD1T20JT6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcDYu4AABl6fVmQAAAABJRU5ErkJggg==", 
-                "sizes": "192x192",
-                "type": "image/png"
-            }
+            { "src": iconBase64, "sizes": "192x192", "type": "image/png" },
+            { "src": iconBase64, "sizes": "512x512", "type": "image/png" }
         ]
     };
-
-    // 2. 將 Manifest 轉為 Blob URL 並注入到 head
-    const stringManifest = JSON.stringify(manifest);
-    const blob = new Blob([stringManifest], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
-    
+    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(manifestBlob);
     const link = document.createElement('link');
     link.rel = 'manifest';
     link.href = manifestURL;
     document.head.appendChild(link);
 
-    // 3. 針對 iOS 的特別設定 (Meta Tags)
+    // --- 3. 插入 iOS Meta Tags ---
     const metaTags = [
         {name: 'apple-mobile-web-app-capable', content: 'yes'},
         {name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent'},
-        {name: 'apple-mobile-web-app-title', content: '瑞士制V16'}
+        {name: 'apple-mobile-web-app-title', content: '瑞士制V16'},
+        {name: 'mobile-web-app-capable', content: 'yes'}
     ];
-    metaTags.forEach(tag => {
-        const meta = document.createElement('meta');
-        meta.name = tag.name;
-        meta.content = tag.content;
-        document.head.appendChild(meta);
+    metaTags.forEach(t => {
+        const m = document.createElement('meta'); m.name = t.name; m.content = t.content;
+        document.head.appendChild(m);
+    });
+    // iOS 圖示
+    const linkIcon = document.createElement('link');
+    linkIcon.rel = 'apple-touch-icon';
+    linkIcon.href = iconBase64;
+    document.head.appendChild(linkIcon);
+
+    // --- 4. 安裝按鈕邏輯 ---
+    let deferredPrompt;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    // 建立安裝按鈕 (預設隱藏)
+    const installBtn = document.createElement('button');
+    installBtn.className = 'nav-item'; // 使用原本的樣式
+    installBtn.style.cssText = "display:none; background: linear-gradient(135deg, #f59e0b, #d97706); color:white; border:none;";
+    installBtn.innerHTML = "📲 安裝";
+    
+    // 將按鈕插入到導航列 (.nav-pills) 的最後面
+    const nav = document.querySelector('.nav-pills');
+    if(nav) nav.appendChild(installBtn);
+
+    // 安卓: 監聽安裝事件
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'block'; // 顯示按鈕
+        
+        installBtn.onclick = () => {
+            installBtn.style.display = 'none';
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('使用者接受安裝');
+                }
+                deferredPrompt = null;
+            });
+        };
     });
 
-    // 4. 註冊 Service Worker (讓網頁可以離線執行)
-    // 注意：Service Worker 在沒有 HTTPS 的環境下 (如 file://) 不會運作
-    if ('serviceWorker' in navigator) {
-        const swCode = `
-            const CACHE_NAME = 'swiss-v16-cache';
-            self.addEventListener('install', (e) => {
-                e.waitUntil(
-                    caches.open(CACHE_NAME).then((cache) => {
-                        // 嘗試快取當前頁面
-                        return cache.addAll(['./']);
-                    })
-                );
-                self.skipWaiting();
-            });
-            self.addEventListener('fetch', (e) => {
-                e.respondWith(
-                    caches.match(e.request).then((response) => {
-                        return response || fetch(e.request);
-                    })
-                );
-            });
-        `;
-        
-        const swBlob = new Blob([swCode], {type: 'application/javascript'});
-        const swUrl = URL.createObjectURL(swBlob);
-
-        navigator.serviceWorker.register(swUrl)
-            .then(() => console.log('PWA Service Worker 註冊成功'))
-            .catch((err) => console.log('PWA 註冊失敗 (可能是因為沒有使用 HTTPS):', err));
+    // iOS: 只要不是在 App 模式中，就顯示按鈕 (教學用)
+    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+    if (isIOS && !isInStandaloneMode) {
+        installBtn.style.display = 'block';
+        installBtn.onclick = () => {
+            alert("👉 iOS 安裝教學：\n\n1. 點擊瀏覽器下方的「分享」按鈕 (方框箭頭)。\n2. 滑動選單找到「加入主畫面」。\n3. 點擊右上角的「加入」。");
+        };
     }
+    
+    // --- 5. 註冊 Service Worker (若支援) ---
+    // 這是為了讓 App 能夠被判定為可安裝，必須要有 fetch handler
+    if ('serviceWorker' in navigator) {
+       const swCode = "self.addEventListener('fetch', function(event) { return; });";
+       const swBlob = new Blob([swCode], {type: 'text/javascript'});
+       const swUrl = URL.createObjectURL(swBlob);
+       navigator.serviceWorker.register(swUrl).catch(e => console.log(e));
+    }
+
 })();
 </script>
 </body>
