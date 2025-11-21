@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>瑞士制積分編排系統 V16.1 (優化版)</title>
+<title>瑞士制積分編排系統 V17.1 (賽事管理優化版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
@@ -37,19 +37,19 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: va
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #e2e8f0;
 }
 .current-group-display { 
-    font-weight: 900; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--primary-dark);
+    font-weight: 900; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--primary-dark);
     padding: 5px 15px; border-radius: 20px; transition: background 0.2s;
 }
 .current-group-display:hover { background: rgba(0,0,0,0.03); }
-.current-group-display:active { opacity: 0.7; background: rgba(0,0,0,0.05); }
-.group-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--primary); display: inline-block; }
+.group-indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); display: inline-block; }
 
 .container { max-width: 1200px; margin: 0 auto; padding: 20px; padding-bottom: 60px; }
 
-/* Header & Nav */
+/* Header (封面) */
 header { text-align: center; margin-bottom: 25px; margin-top: 10px; }
-h1#mainSystemTitle { margin: 0; color: var(--primary-dark); font-weight: 900; font-size: 1.8rem; transition: color 0.3s; }
-.subtitle { color: var(--text-sub); font-size: 0.9rem; margin-top: 5px; }
+h1#displayEventName { margin: 0; color: var(--primary-dark); font-weight: 900; font-size: 2rem; line-height: 1.2; letter-spacing: 1px; transition: color 0.3s; }
+.header-meta-row { color: var(--text-sub); font-size: 1.1rem; margin-top: 5px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 10px; }
+.header-meta-item { background: white; padding: 2px 12px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
 .nav-pills { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; background: white; padding: 6px; border-radius: 50px; box-shadow: var(--shadow-md); width: fit-content; margin-left: auto; margin-right: auto; }
 .nav-item { padding: 8px 20px; border: none; border-radius: 30px; cursor: pointer; font-weight: 600; color: var(--text-sub); background: transparent; transition: all 0.3s; font-size: 0.95rem; }
@@ -59,8 +59,16 @@ h1#mainSystemTitle { margin: 0; color: var(--primary-dark); font-weight: 900; fo
 .section { display: none; animation: slideUp 0.3s ease-out; }
 .section.active { display: block; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
 .input-group { background: var(--card-bg); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-md); margin-bottom: 15px; border: 1px solid #e0f2fe; }
-.input-group h3 { margin-top: 0; color: var(--primary-dark); border-left: 4px solid var(--primary); padding-left: 10px; font-size: 1.1rem; }
+.input-group h3 { margin-top: 0; color: var(--primary-dark); border-left: 4px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin-bottom: 15px; }
+
+/* Form Grids */
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.form-label { font-size: 0.85rem; color: #64748b; font-weight: bold; margin-bottom: 4px; display: block; }
+.form-input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; transition: border 0.2s; background: #f8fafc; }
+.form-input:focus { border-color: var(--primary); outline: none; background: #fff; }
+
 button { padding: 10px 16px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; color: white; transition: transform 0.1s; font-family: 'Noto Sans TC', sans-serif; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 6px; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 button:active { transform: scale(0.96); }
 .btn-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
@@ -82,7 +90,6 @@ button:active { transform: scale(0.96); }
 .action-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .divider { width: 1px; background: #e2e8f0; height: 24px; margin: 0 5px; }
 
-/* 手機版按鈕排版優化: 強制轉為 2欄網格 */
 @media (max-width: 600px) {
     .action-bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 15px; }
     .action-group { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 10px; }
@@ -98,7 +105,6 @@ button:active { transform: scale(0.96); }
     gap: 15px; 
     margin-top: 15px; 
 }
-
 .match-card-ui { background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid #e2e8f0; }
 .match-header { background: #f8fafc; padding: 8px 15px; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub); border-bottom: 1px solid #e0f2fe; }
 .match-content { display: flex; align-items: center; padding: 12px; justify-content: space-between; }
@@ -144,11 +150,11 @@ button:active { transform: scale(0.96); }
 .group-list-item.active-group { border: 2px solid var(--primary); background: var(--bg); }
 .group-color-dot { width: 16px; height: 16px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
 .group-info { flex: 1; }
-.group-name { font-weight: bold; font-size: 1.05rem; display: block; }
-.group-meta { font-size: 0.8rem; color: #64748b; }
+.group-name-main { font-weight: bold; font-size: 1.05rem; display: block; }
+.group-sub { font-size: 0.9rem; color: #64748b; font-weight: 500; }
 .group-actions { display: flex; gap: 5px; }
 
-/* Compact Grid */
+/* Compact Grid for Rules */
 .compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
 @media (min-width: 768px) { .compact-grid { grid-template-columns: 1fr 1fr 1fr 1fr; } }
 .compact-card { background: #fff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; position: relative; overflow: hidden; }
@@ -168,7 +174,7 @@ button:active { transform: scale(0.96); }
     body { margin: 0; padding-top: 10mm; }
 }
 
-/* --- 動畫特效 (V16 增強版) --- */
+/* Animations */
 #loadingOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(15, 23, 42, 0.95);
@@ -188,45 +194,34 @@ button:active { transform: scale(0.96); }
     0% { transform: scale(0.1); opacity: 1; border-width: 4px; }
     100% { transform: scale(1.5); opacity: 0; border-width: 0px; }
 }
-.loading-text {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 1.5rem; font-weight: bold; color: var(--accent);
-    text-shadow: 0 0 10px var(--primary);
-}
+.loading-text { font-family: 'Roboto Mono', monospace; font-size: 1.5rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 10px var(--primary); }
 .loading-sub { margin-top: 10px; font-size: 0.9rem; color: #94a3b8; }
 
-@keyframes cardEntrance {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-.card-animate-enter {
-    animation: cardEntrance 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    opacity: 0;
-}
-@keyframes pulseSmall {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
-    100% { transform: scale(1); }
-}
+@keyframes cardEntrance { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.card-animate-enter { animation: cardEntrance 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
+@keyframes pulseSmall { 0% { transform: scale(1); } 50% { transform: scale(1.02); box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); } 100% { transform: scale(1); } }
 .card-update-pulse { animation: pulseSmall 0.3s ease-out; }
 </style>
 </head>
 <body class="theme-blue">
 
-<!-- Group Switching Bar -->
+<!-- Top Bar -->
 <div class="group-bar">
     <div class="current-group-display" onclick="openGroupManager()">
         <span class="group-indicator"></span>
-        <!-- 修改: 固定顯示「切換組別」，但顏色會跟隨 CSS 變數 -->
-        <span id="topGroupName">切換組別</span>
+        <span id="topBarText">切換賽事/組別</span>
         <span style="font-size:0.8rem; color:#999">▼</span>
     </div>
 </div>
 
 <div class="container">
     <header>
-        <h1 id="mainSystemTitle">瑞士制積分編排系統</h1>
-        <div class="subtitle">by 克勞德</div>
+        <h1 id="displayEventName">賽事名稱</h1>
+        <div class="header-meta-row">
+            <div class="header-meta-item"><span id="displayGroupName">組別</span></div>
+            <span style="color:#cbd5e1">|</span>
+            <div class="header-meta-item"><span id="displayDate">日期</span></div>
+        </div>
     </header>
 
     <div class="nav-pills">
@@ -236,50 +231,75 @@ button:active { transform: scale(0.96); }
         <button class="nav-item" onclick="showSection('summary', this)">總表</button>
     </div>
 
-    <!-- 1. 設定區 -->
+    <!-- 1. 設定區 (V17.1) -->
     <div id="setup" class="section active">
         <div class="input-group">
-            <h3>📝 當前組別設定</h3>
-            <div style="margin-bottom:10px; padding:10px; background:#f8fafc; border-radius:8px; border:1px dashed #ccc;">
-                <label style="font-weight:bold; color:#64748b; font-size:0.9rem;">組別名稱 (顯示於報表)</label>
-                <div style="display:flex; gap:10px; margin-top:5px; flex-wrap:wrap;">
-                    <input type="text" id="compTitleInput" style="flex:1; min-width:180px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;" onchange="saveCurrentGroupData()">
-                    <select id="themeSelect" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" onchange="updateThemeFromSelect(); saveCurrentGroupData()">
-                        <option value="blue">🔵 藍</option>
-                        <option value="green">🟢 綠</option>
-                        <option value="red">🔴 紅</option>
-                        <option value="orange">🟠 橘</option>
-                        <option value="purple">🟣 紫</option>
-                        <option value="teal">⚪ 青</option>
-                        <option value="dark">⚫ 灰</option>
-                    </select>
+            <h3>📝 賽事資訊</h3>
+            
+            <div class="form-grid-2" style="margin-bottom:15px;">
+                <div>
+                    <label class="form-label">賽事名稱 (全名)</label>
+                    <input type="text" id="eventNameInput" class="form-input" placeholder="例如：2025 第五屆 快樂盃象棋錦標賽" onchange="saveCurrentGroupData()">
+                </div>
+                <div>
+                    <label class="form-label">賽事簡稱 (用於報表標題)</label>
+                    <input type="text" id="eventAbbrInput" class="form-input" placeholder="例如：2025快樂盃" onchange="saveCurrentGroupData()">
                 </div>
             </div>
-        </div>
+            
+            <div class="form-grid-2" style="margin-bottom:15px;">
+                <div>
+                    <label class="form-label">組別名稱</label>
+                    <input type="text" id="groupNameInput" class="form-input" placeholder="例如：公開組" onchange="saveCurrentGroupData()">
+                </div>
+                <div>
+                    <label class="form-label">比賽日期</label>
+                    <input type="date" id="dateInput" class="form-input" onchange="saveCurrentGroupData()">
+                </div>
+            </div>
 
-        <div class="input-group">
-            <h3>⚙️ 賽制參數</h3>
+            <div class="form-grid-2" style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px dashed #e2e8f0;">
+                <div>
+                    <label class="form-label">👮 裁判長</label>
+                    <input type="text" id="refereeInput" class="form-input" onchange="saveCurrentGroupData()">
+                </div>
+                <div>
+                    <label class="form-label">📋 賽務長</label>
+                    <input type="text" id="directorInput" class="form-input" onchange="saveCurrentGroupData()">
+                </div>
+            </div>
+
+            <label class="form-label" style="margin-bottom:8px; color:var(--primary-dark);">⚙️ 賽制參數設定</label>
             <div class="compact-grid">
                 <div class="compact-card cc-win"><div class="cc-label"><span>🏆</span>勝局</div><input type="number" id="ptWin" value="2" onchange="saveCurrentGroupData()" class="cc-input"></div>
                 <div class="compact-card cc-draw"><div class="cc-label"><span>🤝</span>和局</div><input type="number" id="ptDraw" value="1" onchange="saveCurrentGroupData()" class="cc-input"></div>
                 <div class="compact-card cc-loss"><div class="cc-label"><span>🥀</span>敗局</div><input type="number" id="ptLoss" value="0" onchange="saveCurrentGroupData()" class="cc-input"></div>
                 <div class="compact-card cc-rnd"><div class="cc-label"><span>🧮</span>對手分輪</div><input type="number" id="oppScoreRounds" value="5" onchange="saveCurrentGroupData()" class="cc-input"></div>
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px;">
-                <div><label style="font-size:0.9rem;color:#64748b">👮裁判長</label><input type="text" id="refereeInput" value="" onchange="saveCurrentGroupData()" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
-                <div><label style="font-size:0.9rem;color:#64748b">📋賽務長</label><input type="text" id="directorInput" value="" onchange="saveCurrentGroupData()" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+            <div style="margin-top:15px;">
+                 <label class="form-label">🎨 介面主題色</label>
+                 <select id="themeSelect" class="form-input" onchange="updateThemeFromSelect(); saveCurrentGroupData()">
+                    <option value="blue">🔵 藍色 (Blue)</option>
+                    <option value="green">🟢 綠色 (Green)</option>
+                    <option value="red">🔴 紅色 (Red)</option>
+                    <option value="orange">🟠 橘色 (Orange)</option>
+                    <option value="purple">🟣 紫色 (Purple)</option>
+                    <option value="teal">⚪ 青色 (Teal)</option>
+                    <option value="dark">⚫ 灰色 (Dark)</option>
+                </select>
             </div>
         </div>
 
         <div class="input-group">
-            <h3>👥 選手名單(一行一位)</h3>
-            <textarea id="playerInput" style="width:100%; height:120px; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="1 張三&#10;2 李四"></textarea>
+            <h3>👥 選手名單 (一行一位)</h3>
+            <textarea id="playerInput" style="width:100%; height:150px; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Roboto Mono', monospace;" placeholder="1 張三&#10;2 李四&#10;3 王五"></textarea>
         </div>
+        
         <div style="text-align:center; margin-bottom:10px;">
             <button class="btn-primary" onclick="runSeedDraw()" style="width:100%; max-width:300px; padding:12px; font-size:1.1rem;">🎲 種子抽籤</button>
         </div>
         <div style="text-align:center; margin-top:10px;">
-            <button class="btn-primary" onclick="initPlayers()" style="width:100%; max-width:300px; padding:12px; font-size:1.1rem;">⚔️ 初始化本組賽程</button>
+            <button class="btn-primary" onclick="initPlayers()" style="width:100%; max-width:300px; padding:12px; font-size:1.1rem;">⚔️ 初始化首輪配對</button>
             <br><br>
             <button class="btn-outline" onclick="document.getElementById('importFile').click()">📂 匯入本組</button>
             <input type="file" id="importFile" style="display:none" onchange="importJSON(this)" accept=".json">
@@ -365,16 +385,14 @@ button:active { transform: scale(0.96); }
 <div id="groupManagerModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <span style="font-size:1.2rem;font-weight:bold">📂 組別管理</span>
+            <span style="font-size:1.2rem;font-weight:bold">📂 賽事/組別管理</span>
             <span class="close-btn" onclick="closeGroupManager()">&times;</span>
         </div>
         <div class="modal-body">
             <div style="margin-bottom:20px; display:flex; gap:10px;">
-                <button class="btn-primary" style="flex:1" onclick="createNewGroup()">+ 新增組別</button>
+                <button class="btn-primary" style="flex:1" onclick="createNewGroup()">+ 新增賽事/組別</button>
             </div>
-            <div id="groupListContainer">
-                <!-- Groups will be rendered here -->
-            </div>
+            <div id="groupListContainer"></div>
         </div>
     </div>
 </div>
@@ -383,12 +401,12 @@ button:active { transform: scale(0.96); }
 <div id="createGroupModal" class="modal" style="z-index:2100;">
     <div class="modal-content" style="max-width:350px; margin-top:20%;">
         <div class="modal-header">
-            <span>建立新組別</span>
+            <span>建立新賽事/組別</span>
             <span class="close-btn" onclick="document.getElementById('createGroupModal').style.display='none'">&times;</span>
         </div>
         <div class="modal-body">
-            <label>組別名稱</label>
-            <input type="text" id="newGroupName" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:5px;" placeholder="例如：推廣組">
+            <label>賽事名稱 (可稍後修改)</label>
+            <input type="text" id="newGroupName" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:5px;" placeholder="例如：週日聯誼賽">
             <label>代表色</label>
             <select id="newGroupColor" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ccc; border-radius:5px;">
                 <option value="blue">🔵 藍色</option>
@@ -436,15 +454,15 @@ button:active { transform: scale(0.96); }
         </div>
     </div>
 </div>
+
+<!-- Seed Report Modal -->
 <div id="seedReportModal" class="modal">
     <div class="modal-content">
         <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
             <span style="font-size:1.2rem;font-weight:bold">🎲 抽籤結果報告</span>
             <span class="close-btn" onclick="document.getElementById('seedReportModal').style.display='none'">&times;</span>
         </div>
-        <div class="modal-body" id="seedReportContent" style="font-size:0.95rem; line-height:1.6;">
-            <!-- Report content goes here -->
-        </div>
+        <div class="modal-body" id="seedReportContent" style="font-size:0.95rem; line-height:1.6;"></div>
         <div style="padding:15px; text-align:center; border-top:1px solid #eee;">
             <button class="btn-primary" onclick="document.getElementById('seedReportModal').style.display='none'">確認並使用</button>
         </div>
@@ -452,7 +470,7 @@ button:active { transform: scale(0.96); }
 </div>
 <div id="printSection"></div>
 
-<!-- 過場動畫遮罩層 -->
+<!-- Loading Overlay -->
 <div id="loadingOverlay">
     <div class="spinner-box">
         <div class="pulse-ring"></div>
@@ -464,26 +482,30 @@ button:active { transform: scale(0.96); }
 </div>
 
 <script>
-/* --- Multi-Group System Logic --- */
-const STORE_PREFIX = 'swiss_v13_';
-const MASTER_INDEX_KEY = 'swiss_v13_master_index';
+/* --- V17 System Logic --- */
+const STORE_PREFIX = 'swiss_v17_';
+const MASTER_INDEX_KEY = 'swiss_v17_master_index';
 
 let groups = [];
 let activeGroupId = null;
 
+// V17 Data Structure Upgrade
 let sysData = {
-    title: "未命名比賽",
+    info: {
+        eventName: "未命名賽事",
+        eventAbbr: "",
+        groupName: "公開組",
+        date: new Date().toISOString().slice(0,10)
+    },
     pointsConfig: {win:2, draw:1, loss:0},
     players: [], pairings: [], currentRound: 0,
     signatures: {ref:"", dir:""},
     settings: {oppScoreRounds: 5, themeColor: 'blue'}
 };
 
-// --- Initialization ---
 window.onload = function(){
     loadGroupSystem();
     updateButtonsState();
-    
     window.onclick = function(event) {
         if (!event.target.matches('.btn-teal') && !event.target.matches('.btn-purple')) {
             document.getElementById('menuPre').style.display = "none";
@@ -497,27 +519,11 @@ function loadGroupSystem() {
     if (indexJson) {
         groups = JSON.parse(indexJson);
     } else {
-        const oldData = localStorage.getItem('swiss_v10_11');
         const defaultId = 'group_' + Date.now();
-        let initialData = null;
-        let groupName = "預設組別";
-        let groupColor = "blue";
-
-        if (oldData) {
-            try {
-                initialData = JSON.parse(oldData);
-                groupName = initialData.title || "匯入的舊比賽";
-                groupColor = initialData.settings?.themeColor || "blue";
-                alert("系統檢測到舊版資料，已自動遷移至「" + groupName + "」");
-            } catch(e) {}
-        }
-
-        groups = [{ id: defaultId, name: groupName, color: groupColor, lastModified: Date.now() }];
+        groups = [{ id: defaultId, name: "範例賽事", groupName: "公開組", color: "blue", lastModified: Date.now() }];
         localStorage.setItem(MASTER_INDEX_KEY, JSON.stringify(groups));
-        
-        if (initialData) {
-            localStorage.setItem(STORE_PREFIX + defaultId, JSON.stringify(initialData));
-        }
+        sysData.info.eventName = "範例賽事";
+        localStorage.setItem(STORE_PREFIX + defaultId, JSON.stringify(sysData));
     }
 
     if (groups.length > 0) {
@@ -525,51 +531,46 @@ function loadGroupSystem() {
     }
 }
 
-function saveGroupsIndex() {
-    localStorage.setItem(MASTER_INDEX_KEY, JSON.stringify(groups));
-}
+function saveGroupsIndex() { localStorage.setItem(MASTER_INDEX_KEY, JSON.stringify(groups)); }
 
 function switchGroup(groupId) {
-    if (activeGroupId) {
-        saveCurrentGroupData();
-    }
-
+    if (activeGroupId) saveCurrentGroupData();
     const targetGroup = groups.find(g => g.id === groupId);
     if (!targetGroup) return;
 
     activeGroupId = groupId;
-    
     const dataJson = localStorage.getItem(STORE_PREFIX + groupId);
+    
     if (dataJson) {
         try {
             sysData = JSON.parse(dataJson);
-        } catch(e) {
-            console.error("Data load error", e);
-            resetSysDataStruct(); 
-        }
+            if(!sysData.info) {
+                sysData.info = {
+                    eventName: sysData.title || targetGroup.name,
+                    eventAbbr: "",
+                    groupName: "預設組別",
+                    date: new Date().toISOString().slice(0,10)
+                };
+            }
+        } catch(e) { console.error("Data load error", e); resetSysDataStruct(); }
     } else {
         resetSysDataStruct(); 
-        sysData.title = targetGroup.name;
+        sysData.info.eventName = targetGroup.name;
         sysData.settings.themeColor = targetGroup.color;
     }
 
-    applyTheme(targetGroup.color);
-    
-    // 修改: 不再改變頂部的文字，只改變顏色（通過 Theme），文字固定為「切換組別」
-    // document.getElementById('topGroupName').innerText = targetGroup.name; // 移除此行
-    
+    applyTheme(sysData.settings.themeColor || targetGroup.color);
     document.querySelector('.group-indicator').style.backgroundColor = `var(--primary)`;
     updateUI();
     viewingRound = sysData.currentRound;
     if (sysData.currentRound > 0) renderPairingList(true);
     else document.getElementById('pairingList').innerHTML = ''; 
-    
     showSection('setup', document.querySelectorAll('.nav-item')[0]); 
 }
 
 function resetSysDataStruct() {
     sysData = {
-        title: "未命名比賽",
+        info: { eventName: "未命名賽事", eventAbbr: "", groupName: "公開組", date: new Date().toISOString().slice(0,10) },
         pointsConfig: {win:2, draw:1, loss:0},
         players: [], pairings: [], currentRound: 0,
         signatures: {ref:"", dir:""},
@@ -580,6 +581,17 @@ function resetSysDataStruct() {
 function saveCurrentGroupData() {
     if (!activeGroupId) return;
     
+    // Get Info
+    sysData.info.eventName = document.getElementById('eventNameInput').value.trim() || "未命名賽事";
+    sysData.info.eventAbbr = document.getElementById('eventAbbrInput').value.trim();
+    sysData.info.groupName = document.getElementById('groupNameInput').value.trim();
+    sysData.info.date = document.getElementById('dateInput').value;
+
+    sysData.signatures = {
+        ref: document.getElementById('refereeInput').value,
+        dir: document.getElementById('directorInput').value
+    };
+
     sysData.pointsConfig = {
         win: parseFloat(document.getElementById('ptWin').value)||2,
         draw: parseFloat(document.getElementById('ptDraw').value)||1,
@@ -587,56 +599,73 @@ function saveCurrentGroupData() {
     };
     sysData.settings.oppScoreRounds = parseInt(document.getElementById('oppScoreRounds').value)||5;
     sysData.settings.themeColor = document.getElementById('themeSelect').value; 
-    sysData.signatures = {ref:document.getElementById('refereeInput').value, dir:document.getElementById('directorInput').value};
-    sysData.title = document.getElementById('compTitleInput').value.trim() || sysData.title;
-
+    
     localStorage.setItem(STORE_PREFIX + activeGroupId, JSON.stringify(sysData));
     
+    // Update Index List name & groupName
     const gIndex = groups.findIndex(g => g.id === activeGroupId);
     if (gIndex !== -1) {
         let changed = false;
-        if (groups[gIndex].name !== sysData.title) { groups[gIndex].name = sysData.title; changed = true; }
+        if (groups[gIndex].name !== sysData.info.eventName) { groups[gIndex].name = sysData.info.eventName; changed = true; }
+        if (groups[gIndex].groupName !== sysData.info.groupName) { groups[gIndex].groupName = sysData.info.groupName; changed = true; }
         if (groups[gIndex].color !== sysData.settings.themeColor) { 
             groups[gIndex].color = sysData.settings.themeColor; 
             applyTheme(groups[gIndex].color);
             changed = true; 
         }
-        if (changed) {
-            // document.getElementById('topGroupName').innerText = groups[gIndex].name; // 移除此行
-            saveGroupsIndex();
-        }
+        if (changed) saveGroupsIndex();
     }
-    updateTitleDisplay();
+    updateHeaderDisplay();
 }
 
-// --- Theme Management ---
 function applyTheme(colorName) {
     document.body.className = `theme-${colorName}`;
     document.getElementById('themeSelect').value = colorName;
 }
-function updateThemeFromSelect() {
-    const c = document.getElementById('themeSelect').value;
-    applyTheme(c);
+function updateThemeFromSelect() { applyTheme(document.getElementById('themeSelect').value); }
+
+function updateHeaderDisplay() {
+    document.getElementById('displayEventName').innerText = sysData.info.eventName;
+    document.getElementById('displayGroupName').innerText = sysData.info.groupName || "組別";
+    document.getElementById('displayDate').innerText = sysData.info.date || "日期";
+    document.title = sysData.info.eventName + " - 瑞士制排程";
 }
 
-// --- Group UI Management ---
+function updateUI(){
+    document.getElementById('eventNameInput').value = sysData.info.eventName;
+    document.getElementById('eventAbbrInput').value = sysData.info.eventAbbr || "";
+    document.getElementById('groupNameInput').value = sysData.info.groupName || "";
+    document.getElementById('dateInput').value = sysData.info.date || "";
+    document.getElementById('refereeInput').value = sysData.signatures?.ref || '';
+    document.getElementById('directorInput').value = sysData.signatures?.dir || '';
+    document.getElementById('ptWin').value = sysData.pointsConfig.win;
+    document.getElementById('ptDraw').value = sysData.pointsConfig.draw;
+    document.getElementById('ptLoss').value = sysData.pointsConfig.loss;
+    document.getElementById('oppScoreRounds').value = sysData.settings.oppScoreRounds || 5;
+    document.getElementById('themeSelect').value = sysData.settings.themeColor || 'blue';
+    if(sysData.players.length>0){
+        document.getElementById('playerInput').value = sysData.players.filter(p=>!p.isBye).map(p=>`${p.number} ${p.name}`).join('\n');
+    } else {
+        document.getElementById('playerInput').value = '';
+    }
+    updateHeaderDisplay();
+}
+
+/* --- Group Manager UI (Updated) --- */
 function openGroupManager() {
     const list = document.getElementById('groupListContainer');
     list.innerHTML = '';
-    
     groups.forEach(g => {
         const div = document.createElement('div');
         div.className = `group-list-item ${g.id === activeGroupId ? 'active-group' : ''}`;
-        
         const colorMap = {blue:'#3b82f6', green:'#10b981', red:'#ef4444', orange:'#f59e0b', purple:'#8b5cf6', teal:'#06b6d4', dark:'#334155'};
         const dotColor = colorMap[g.color] || '#ccc';
-        
         div.innerHTML = `
             <div style="display:flex; align-items:center; flex:1" onclick="switchGroupAndClose('${g.id}')">
                 <div class="group-color-dot" style="background:${dotColor}"></div>
                 <div class="group-info">
-                    <span class="group-name">${g.name}</span>
-                    <span class="group-meta">${g.id === activeGroupId ? '目前選擇' : '點擊切換'}</span>
+                    <span class="group-name-main">${g.name}</span>
+                    <span class="group-sub">${g.groupName || '未命名組別'}</span>
                 </div>
             </div>
             <div class="group-actions">
@@ -645,59 +674,43 @@ function openGroupManager() {
         `;
         list.appendChild(div);
     });
-    
     document.getElementById('groupManagerModal').style.display = 'flex';
 }
-
 function closeGroupManager() { document.getElementById('groupManagerModal').style.display = 'none'; }
 function switchGroupAndClose(id) { switchGroup(id); closeGroupManager(); }
-
 function createNewGroup() { document.getElementById('createGroupModal').style.display = 'block'; }
 function confirmCreateGroup() {
-    const name = document.getElementById('newGroupName').value.trim() || "新組別";
+    const name = document.getElementById('newGroupName').value.trim() || "新賽事";
     const color = document.getElementById('newGroupColor').value;
     const newId = 'group_' + Date.now();
-    
-    groups.push({ id: newId, name: name, color: color, lastModified: Date.now() });
+    groups.push({ id: newId, name: name, groupName: "公開組", color: color, lastModified: Date.now() });
     saveGroupsIndex();
-    
     const emptyData = {
-        title: name,
+        info: { eventName: name, eventAbbr: "", groupName: "公開組", date: new Date().toISOString().slice(0,10) },
         pointsConfig: {win:2, draw:1, loss:0},
         players: [], pairings: [], currentRound: 0,
         signatures: {ref:"", dir:""},
         settings: {oppScoreRounds: 5, themeColor: color}
     };
     localStorage.setItem(STORE_PREFIX + newId, JSON.stringify(emptyData));
-    
     document.getElementById('createGroupModal').style.display = 'none';
     switchGroup(newId);
     closeGroupManager();
 }
-
 function deleteGroup(id) {
-    if (!confirm("⚠️ 確定刪除此組別？\n所有選手資料和成績將永久消失！")) return;
+    if (!confirm("⚠️ 確定刪除此賽事紀錄？\n所有資料將永久消失！")) return;
     groups = groups.filter(g => g.id !== id);
     saveGroupsIndex();
     localStorage.removeItem(STORE_PREFIX + id);
-    if (id === activeGroupId) {
-        switchGroup(groups[0].id);
-    }
+    if (id === activeGroupId) switchGroup(groups[0].id);
     openGroupManager(); 
 }
 
-// --- Standard Swiss System Functions ---
-
+/* --- System Functions (Safety & Logic) --- */
 let viewingRound = 0;
 let winRateChart = null;
 let isManualMode = false;
 let swapSource = null;
-
-function updateTitleDisplay() {
-    const t = sysData.title || "瑞士制積分編排系統";
-    document.getElementById('mainSystemTitle').innerText = t; 
-    document.title = t; 
-}
 
 function toggleMenu(id) {
     let m = document.getElementById(id); let d = m.style.display;
@@ -717,47 +730,34 @@ function showSection(id, btn){
 
 function resetSystem(){
     if(!confirm("⚠️ 確定重置本組？所有資料將消失！")) return;
-    resetSysDataStruct();
-    sysData.title = groups.find(g=>g.id===activeGroupId).name;
-    sysData.settings.themeColor = groups.find(g=>g.id===activeGroupId).color;
-    viewingRound=0; 
+    sysData.players = []; sysData.pairings = []; sysData.currentRound = 0;
+    viewingRound = 0;
     saveCurrentGroupData();
     updateUI();
-    alert("已重置本組");
+    alert("已重置本組資料");
     showSection('setup', document.querySelectorAll('.nav-item')[0]);
 }
 
+// Updated Init Logic (Auto Pair Round 1)
 function initPlayers(){
-    const t = document.getElementById('compTitleInput').value.trim();
+    if(sysData.pairings.length > 0) {
+        if(!confirm("⚠️ 警告：本組已有賽程資料！\n初始化將會「清除所有賽程與成績」並重新開始。\n\n確定執行嗎？")) return;
+    }
     const txt = document.getElementById('playerInput').value.trim();
     if(!txt) return alert('請輸入選手');
-    sysData.title = t || "瑞士制比賽";
+    
+    // Save info
+    saveCurrentGroupData();
     const ns = txt.split('\n').map(n=>n.replace(/^\d+[\.\s、]*/, '').trim()).filter(n=>n);
     if(ns.length<2) return alert('至少2人');
+    
     sysData.players = ns.map((n,i)=>({id:i+1, number:i+1, name:n, points:0, opponentPoints:0, opponents:[], colors:[], results:[], isBye:false, isWithdrawn:false, rankNote: "" }));
     if(sysData.players.length % 2 !== 0) sysData.players.push({ id:sysData.players.length+1, number:sysData.players.length+1, name:"輪空", points:-1, opponentPoints:0, opponents:[], colors:[], results:[], isBye:true, isWithdrawn:false, rankNote: "" });
     sysData.currentRound=0; viewingRound=0; sysData.pairings=[];
-    saveCurrentGroupData(); 
-    updateUI(); 
-    alert(`已初始化 ${sysData.players.length} 位選手`); 
+    
+    // Auto Pair Round 1
+    generateNextRound();
     showSection('pairing', document.querySelectorAll('.nav-item')[1]);
-}
-
-function updateUI(){
-    if(sysData.players.length>0){
-        document.getElementById('playerInput').value = sysData.players.filter(p=>!p.isBye).map(p=>`${p.number} ${p.name}`).join('\n');
-    } else {
-        document.getElementById('playerInput').value = '';
-    }
-    document.getElementById('compTitleInput').value = sysData.title;
-    document.getElementById('ptWin').value = sysData.pointsConfig.win;
-    document.getElementById('ptDraw').value = sysData.pointsConfig.draw;
-    document.getElementById('ptLoss').value = sysData.pointsConfig.loss;
-    document.getElementById('oppScoreRounds').value = sysData.settings.oppScoreRounds || 5;
-    document.getElementById('refereeInput').value = sysData.signatures?.ref || '';
-    document.getElementById('directorInput').value = sysData.signatures?.dir || '';
-    document.getElementById('themeSelect').value = sysData.settings.themeColor || 'blue';
-    updateTitleDisplay();
 }
 
 function changeViewRound(delta) {
@@ -767,18 +767,59 @@ function changeViewRound(delta) {
     if(isManualMode) toggleManualMode();
     renderPairingList(true); updateButtonsState();
 }
-
 function setRes(wId, r){ 
     let p = sysData.pairings.find(x => x.round===viewingRound && x.white.number===wId); 
-    if(p){ 
-        p.result = r; 
-        updateScores(); 
-        saveCurrentGroupData(); 
-        renderPairingList(false, wId); 
-    } 
+    if(p){ p.result = r; updateScores(); saveCurrentGroupData(); renderPairingList(false, wId); } 
 }
 
-// --- Core Pairing Logic ---
+/* --- Import/Export Logic --- */
+function exportJSON() {
+    saveCurrentGroupData(); 
+    const dataStr = JSON.stringify(sysData, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const timeStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
+    let fname = sysData.info.eventName || "賽事備份";
+    link.download = `${fname}_${sysData.info.groupName}_備份_${timeStr}.json`;
+    document.body.appendChild(link); link.click();
+    setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100);
+}
+
+function importJSON(input) { 
+    const f=input.files[0]; if(!f)return; 
+    const r=new FileReader(); 
+    r.onload=function(e){
+        try {
+            let importedData = JSON.parse(e.target.result);
+            if(!importedData.info) {
+                importedData.info = {
+                    eventName: importedData.title || "匯入賽事",
+                    eventAbbr: "",
+                    groupName: "預設組別",
+                    date: new Date().toISOString().slice(0,10)
+                };
+            }
+            const newId = 'group_' + Date.now();
+            const newName = importedData.info.eventName;
+            const newGroupName = importedData.info.groupName;
+            const newColor = importedData.settings?.themeColor || 'blue';
+            
+            groups.push({ id: newId, name: newName, groupName: newGroupName, color: newColor, lastModified: Date.now() });
+            saveGroupsIndex();
+            
+            localStorage.setItem(STORE_PREFIX + newId, JSON.stringify(importedData));
+            alert(`✅ 匯入成功！\n已建立「${newName} - ${newGroupName}」並切換。`);
+            switchGroup(newId);
+            
+        } catch(err) { console.error(err); alert("檔案格式錯誤或損毀"); }
+    }; 
+    r.readAsText(f);
+    input.value = ''; 
+}
+
+/* --- Pairing Logic --- */
 function generateNextRound(){
     if(viewingRound !== sysData.currentRound && sysData.currentRound > 0) return alert("請先切換至最新一輪");
     if(sysData.currentRound > 0){ 
@@ -810,7 +851,6 @@ function generateNextRound(){
         if (bal1 * bal2 > 0) penalty += 20;
         return penalty;
     }
-
     function solveSwiss(currentPlayers, forbidRepeats) {
         if (currentPlayers.length === 0) return [];
         let p1 = currentPlayers[0];
@@ -832,7 +872,6 @@ function generateNextRound(){
         }
         return null;
     }
-
     let solvedPairs = solveSwiss(active, true);
     if (solvedPairs === null) {
         alert("⚠️ 提示：無法不重複對弈，系統將允許重複。");
@@ -853,7 +892,6 @@ function generateNextRound(){
     renderPairingList(true); 
     updateButtonsState();
 }
-
 function getColorTrend(p) { if(p.colors.length<2)return 0; let l1=p.colors[p.colors.length-1], l2=p.colors[p.colors.length-2]; return (l1==='先'&&l2==='先')?1:(l1==='後'&&l2==='後')?-1:0; }
 function assignColors(p1, p2) {
     let r1=p1.colors.filter(c=>c==='先').length, b1=p1.colors.filter(c=>c==='後').length;
@@ -882,11 +920,10 @@ function calcScoreBeforeRound(num, tr) {
     sysData.pairings.forEach(p=>{ if(p.round < tr && p.result!==null){ if(p.white.number===num){ tot+=(p.black.isBye||p.result===1)?W:(p.result===0.5?D:L); } else if(p.black.number===num){ tot+=(p.result===0)?W:(p.result===0.5?D:L); } } });
     return tot;
 }
-
 function renderPairingList(animate = false, highlightNumber = null){
     const listDiv = document.getElementById('pairingList');
     const title = document.getElementById('roundTitle');
-    if(viewingRound === 0) { title.innerText = "準備中"; listDiv.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#9ca3af;grid-column:1/-1">請點擊「生成下一輪」開始比賽</div>'; return; }
+    if(viewingRound === 0) { title.innerText = "準備中"; listDiv.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#9ca3af;grid-column:1/-1">請點擊「初始化首輪配對」開始比賽</div>'; return; }
     let isCurrent = (viewingRound === sysData.currentRound);
     title.innerText = `第 ${viewingRound} 輪` + (isCurrent ? "" : " (歷史)");
     let pairs = sysData.pairings.filter(p=>p.round === viewingRound);
@@ -895,27 +932,14 @@ function renderPairingList(animate = false, highlightNumber = null){
     pairs.forEach((p, idx) => {
         let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, viewingRound);
         let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, viewingRound);
-        
         const card = document.createElement('div'); 
         card.className = 'match-card-ui';
-        
-        if (animate) {
-            card.classList.add('card-animate-enter');
-            let delay = 0;
-            if (idx < 12) delay = idx * 0.1; 
-            else delay = 1.2;
-            card.style.animationDelay = `${delay}s`;
-        }
-
-        if (highlightNumber !== null && (p.white.number === highlightNumber || p.black.number === highlightNumber)) {
-            card.classList.add('card-update-pulse');
-        }
-        
+        if (animate) { card.classList.add('card-animate-enter'); card.style.animationDelay = `${idx < 12 ? idx * 0.1 : 1.2}s`; }
+        if (highlightNumber !== null && (p.white.number === highlightNumber || p.black.number === highlightNumber)) card.classList.add('card-update-pulse');
         let centerHTML = '';
         if(p.result === null) {
-            if(!p.black.isBye && !isManualMode) {
-                centerHTML = `<div class="vs-area"><div class="btn-res-group"><button class="btn-res btn-res-red" onclick="setRes(${p.white.number},1)">紅</button><button class="btn-res btn-res-draw" onclick="setRes(${p.white.number},0.5)">和</button><button class="btn-res btn-res-black" onclick="setRes(${p.white.number},0)">黑</button></div></div>`;
-            } else { centerHTML = `<div class="vs-area"><div style="font-style:italic;font-weight:900;color:#cbd5e1;font-size:1.5rem;">VS</div></div>`; }
+            if(!p.black.isBye && !isManualMode) { centerHTML = `<div class="vs-area"><div class="btn-res-group"><button class="btn-res btn-res-red" onclick="setRes(${p.white.number},1)">紅</button><button class="btn-res btn-res-draw" onclick="setRes(${p.white.number},0.5)">和</button><button class="btn-res btn-res-black" onclick="setRes(${p.white.number},0)">黑</button></div></div>`; } 
+            else { centerHTML = `<div class="vs-area"><div style="font-style:italic;font-weight:900;color:#cbd5e1;font-size:1.5rem;">VS</div></div>`; }
         } else {
             let resT='', tagC='';
             if(p.black.isBye) { resT="輪空勝"; tagC="tag-draw"; }
@@ -932,7 +956,6 @@ function renderPairingList(animate = false, highlightNumber = null){
         listDiv.appendChild(card);
     });
 }
-
 function toggleManualMode() {
     if(viewingRound !== sysData.currentRound) return alert("只能在最新一輪進行調整");
     isManualMode = !isManualMode; swapSource = null;
@@ -953,14 +976,10 @@ function handleManualSelect(pIdx, isWhite) {
     let playerTgt = isWhite ? pTgt.white : pTgt.black;
     if(swapSource.isWhite) pSrc.white = playerTgt; else pSrc.black = playerTgt;
     if(isWhite) pTgt.white = playerSrc; else pTgt.black = playerSrc;
-    
-    // --- BUG FIX: 檢查是否移到了 Bye 位置 ---
     if(pSrc.black.isBye || pSrc.white.isBye) { pSrc.result = 1; } else { pSrc.result = null; }
     if(pTgt.black.isBye || pTgt.white.isBye) { pTgt.result = 1; } else { pTgt.result = null; }
-    
     saveCurrentGroupData(); swapSource=null; document.getElementById('swapIndicator').innerText = "交換成功！"; renderPairingList(false);
 }
-
 function updateButtonsState(){ const isLatest = (viewingRound === sysData.currentRound); document.getElementById('genBtn').style.display = isLatest ? 'inline-block' : 'none'; document.getElementById('manualModeBtn').style.display = isLatest ? 'inline-block' : 'none'; document.getElementById('undoBtn').style.display = (isLatest && sysData.currentRound>0) ? 'inline-block' : 'none'; }
 function getH2HWinner(p1, p2) { let idx = p1.opponents.indexOf(p2.number); if (idx === -1) return 0; return p1.results[idx] === '勝' ? -1 : (p1.results[idx] === '負' ? 1 : 0); }
 function updatePlayerNote(num, val) { let p = sysData.players.find(x => x.number === num); if (p) { p.rankNote = val; saveCurrentGroupData(); } }
@@ -1007,15 +1026,7 @@ function renderStatsChart() {
 }
 
 /* Print Module */
-const printThemes = {
-    blue:   { head: '#1e40af', row: '#eff6ff' }, 
-    green:  { head: '#047857', row: '#ecfdf5' }, 
-    orange: { head: '#c2410c', row: '#fff7ed' }, 
-    purple: { head: '#7e22ce', row: '#f3e8ff' }, 
-    teal:   { head: '#0f766e', row: '#f0fdfa' }, 
-    red:    { head: '#b91c1c', row: '#fef2f2' }, 
-    dark:   { head: '#334155', row: '#f1f5f9' }  
-};
+const printThemes = { blue:{head:'#1e40af',row:'#eff6ff'}, green:{head:'#047857',row:'#ecfdf5'}, orange:{head:'#c2410c',row:'#fff7ed'}, purple:{head:'#7e22ce',row:'#f3e8ff'}, teal:{head:'#0f766e',row:'#f0fdfa'}, red:{head:'#b91c1c',row:'#fef2f2'}, dark:{head:'#334155',row:'#f1f5f9'} };
 function getThemeColorObj() { const tName = sysData.settings.themeColor || 'blue'; return printThemes[tName] || printThemes['blue']; }
 function getPortraitPrintStyle(theme) {
     return `<style>
@@ -1037,12 +1048,26 @@ function getPortraitPrintStyle(theme) {
     </style>`;
 }
 
+// 報表標題產生器 (Updated for Group Name Only)
+function getReportTitle(type) {
+    const abbr = sysData.info.eventAbbr || sysData.info.eventName;
+    const grp = sysData.info.groupName || "公開組";
+    // Modified: Title format based on feedback [Group Name] [Report Type]
+    // Keeping Event Name in subtitle or smaller context is better, but user requested Group Name titles.
+    // We'll combine them for best clarity: [Event] [Group] [Type]
+    return `${abbr} ${grp} ${type}`;
+}
+
 function getPairingListHTML(mode) {
     const pairs = sysData.pairings.filter(p=>p.round === viewingRound);
     pairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
     const theme = getThemeColorObj();
+    // 賽前/賽後對陣表主標題：改為組別名稱 (V17.1)
     let h = getPortraitPrintStyle(theme) + `
-    <div class="print-header"><h1>${sysData.title} 第 ${viewingRound} 輪 ${mode==='pre'?'賽前對陣表':'賽後成績表'}</h1></div>
+    <div class="print-header">
+        <h1>${sysData.info.groupName} 第 ${viewingRound} 輪 ${mode==='pre'?'對陣表':'成績表'}</h1>
+        <div style="font-size:14pt;color:#666;margin-top:5px">${sysData.info.eventName}</div>
+    </div>
     <table class="print-report-table">
         <thead><tr><th width="8%">桌次</th><th width="8%">編號</th><th width="25%">紅方 (先)</th><th width="6%">分</th><th width="12%">結果</th><th width="6%">分</th><th width="8%">編號</th><th width="25%">黑方 (後)</th></tr></thead>
         <tbody>`;
@@ -1067,8 +1092,9 @@ function getRankingsHTML() {
         let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h; if(b.wins !== a.wins) return b.wins - a.wins; return b.sSOS - a.sSOS;
     });
     const theme = getThemeColorObj();
+    const titleStr = getReportTitle("名次表");
     let h = getPortraitPrintStyle(theme) + `
-    <div class="print-header"><h1>${sysData.title} 名次表</h1></div>
+    <div class="print-header"><h1>${titleStr}</h1></div>
     <table class="print-report-table">
         <thead><tr><th width="6%">名次</th><th width="6%">編號</th><th width="16%">姓名</th><th width="8%">積分</th><th width="8%">對手分</th><th width="8%">對戰</th><th width="8%">勝局</th><th width="8%">後勝</th><th width="8%">後數</th><th width="8%">強對手</th><th width="16%">備註</th></tr></thead><tbody>`;
     s.forEach((p,i)=>{
@@ -1082,7 +1108,6 @@ function getRankingsHTML() {
 
 function getSummaryHTML() {
     updateScores(); 
-    // 計算排名邏輯 (V16.1 新增)
     let rankedList = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> {
         if(b.points !== a.points) return b.points - a.points; 
         if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
@@ -1097,8 +1122,7 @@ function getSummaryHTML() {
 
     let trs = sysData.currentRound || 1; 
     const theme = getThemeColorObj();
-    
-    // V16.1 新增 .rank-badge 樣式 與 調整 footer 字體
+    const titleStr = getReportTitle("成績總表");
     let h = `<style>
     @page { size: landscape; margin: 5mm; } 
     .print-report-table { width: 100%; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; margin-bottom: 5px; border: 2px solid #333; } 
@@ -1113,7 +1137,7 @@ function getSummaryHTML() {
     .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }
     .rank-badge { background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-block; line-height: 24px; text-align: center; font-size: 11pt; font-weight: bold; -webkit-print-color-adjust: exact; }
     </style>` + `
-    <div class="print-header"><h1>${sysData.title} 成績總表</h1></div>
+    <div class="print-header"><h1>${titleStr}</h1></div>
     <table class="print-report-table" style="width:100%">
         <thead><tr><th colspan="5">基本資料</th>${Array.from({length:trs},(_,i)=>`<th colspan="3">第 ${i+1} 輪</th>`).join('')}<th></th></tr>
         <tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>${Array.from({length:trs},()=>`<th>對手</th><th>先後</th><th>結果</th>`).join('')}<th>排名</th></tr></thead><tbody>`;
@@ -1149,7 +1173,7 @@ function printPairingCards(){
         .print-page { width: 100%; height: 285mm; display: flex; flex-wrap: wrap; align-content: flex-start; page-break-after: always; box-sizing: border-box; }
         .print-page:last-child { page-break-after: auto; }
         .match-card { width: 48%; height: 23.5%; border: 1px dashed #999; margin: 1%; padding: 5px; display: flex; flex-direction: column; justify-content: flex-start; box-sizing: border-box; }
-        .card-header-main { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 2px; font-family: "DFKai-SB", serif; }
+        .card-header-main { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 2px; font-family: "DFKai-SB", serif; }
         .card-sub-header { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; margin-bottom: 2px; padding: 0 5px; font-family: "DFKai-SB", serif; }
         .card-table { width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; flex-grow: 1; }
         .card-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 2px 0; font-family: "DFKai-SB", serif; }
@@ -1158,11 +1182,18 @@ function printPairingCards(){
         .border-mid-thick { border-left: 3px double #000 !important; } .label-cell { font-size: 18px; font-weight: bold; }
     </style>`;
     let html = css;
+    // 對陣桌卡標題：改為組別名稱 (V17.1)
     for(let i=0; i<ps.length; i+=8){
         html += '<div class="print-page">';
         ps.slice(i, i+8).forEach((p, idx)=>{
              let tableNum = sysData.pairings.filter(x=>x.round===viewingRound).indexOf(p) + 1;
-             html += `<div class="match-card"><div class="card-header-main">${sysData.title}</div><div class="card-sub-header"><span>第 ${viewingRound} 輪</span><span>第 ${tableNum} 桌</span></div><table class="card-table"><colgroup><col style="width:10%"><col style="width:10%"><col style="width:15%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:15%"><col style="width:15%"></colgroup><tr class="row-player"><td class="txt-red label-cell">先</td><td class="txt-red">${p.white.number}</td><td class="txt-red" colspan="2">${p.white.name}</td><td class="txt-black label-cell border-mid-thick">後</td><td class="txt-black">${p.black.number}</td><td class="txt-black" colspan="2">${p.black.name}</td></tr><tr class="row-score"><td class="txt-red label-cell" colspan="2">積分</td><td class="txt-red" colspan="2">${p.white.points}</td><td class="txt-black label-cell border-mid-thick" colspan="2">積分</td><td class="txt-black" colspan="2">${p.black.points}</td></tr><tr class="row-sign"><td class="txt-red label-cell">簽名</td><td colspan="3"></td><td class="txt-black label-cell border-mid-thick">簽名</td><td colspan="3"></td></tr><tr class="row-result"><td class="txt-red label-cell">勝負</td><td colspan="3"></td><td class="txt-black label-cell border-mid-thick">勝負</td><td colspan="3"></td></tr></table></div>`;
+             html += `<div class="match-card">
+                <div class="card-header-main">${sysData.info.groupName}</div>
+                <div class="card-sub-header">
+                    <span>${sysData.info.eventName}</span>
+                    <span>R${viewingRound} / 桌${tableNum}</span>
+                </div>
+                <table class="card-table"><colgroup><col style="width:10%"><col style="width:10%"><col style="width:15%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:15%"><col style="width:15%"></colgroup><tr class="row-player"><td class="txt-red label-cell">先</td><td class="txt-red">${p.white.number}</td><td class="txt-red" colspan="2">${p.white.name}</td><td class="txt-black label-cell border-mid-thick">後</td><td class="txt-black">${p.black.number}</td><td class="txt-black" colspan="2">${p.black.name}</td></tr><tr class="row-score"><td class="txt-red label-cell" colspan="2">積分</td><td class="txt-red" colspan="2">${p.white.points}</td><td class="txt-black label-cell border-mid-thick" colspan="2">積分</td><td class="txt-black" colspan="2">${p.black.points}</td></tr><tr class="row-sign"><td class="txt-red label-cell">簽名</td><td colspan="3"></td><td class="txt-black label-cell border-mid-thick">簽名</td><td colspan="3"></td></tr><tr class="row-result"><td class="txt-red label-cell">勝負</td><td colspan="3"></td><td class="txt-black label-cell border-mid-thick">勝負</td><td colspan="3"></td></tr></table></div>`;
         });
         html += '</div>';
     }
@@ -1182,20 +1213,20 @@ async function handleImageShare(htmlContent, filename) {
         }, 'image/jpeg', 0.9);
     } catch (err) { alert("圖片失敗"); container.style.display = 'none'; }
 }
-function shareImage(mode) { if(viewingRound===0)return alert("未選擇輪次"); handleImageShare(getPairingListHTML(mode), `${sysData.title}_R${viewingRound}_${mode==='pre'?'對陣':'成績'}`); }
-function shareRankingsImg() { handleImageShare(getRankingsHTML(), `${sysData.title}_名次表`); }
-function shareSummaryImg() { const container = document.getElementById('printSection'); container.style.width = "1400px"; handleImageShare(getSummaryHTML(), `${sysData.title}_成績總表`); }
+function shareImage(mode) { if(viewingRound===0)return alert("未選擇輪次"); handleImageShare(getPairingListHTML(mode), `${sysData.info.eventName}_R${viewingRound}_${mode==='pre'?'對陣':'成績'}`); }
+function shareRankingsImg() { handleImageShare(getRankingsHTML(), `${getReportTitle('名次表')}`); }
+function shareSummaryImg() { const container = document.getElementById('printSection'); container.style.width = "1400px"; handleImageShare(getSummaryHTML(), `${getReportTitle('成績總表')}`); }
 
 function exportToExcel(){
     updateRankings(); updateScores();
     let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>`;
-    html += `<h3>${sysData.title} 名次表</h3>`;
+    html += `<h3>${getReportTitle('名次表')}</h3>`;
     html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th>名次</th><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>對戰</th><th>勝局</th><th>後手勝</th><th>後手數</th><th>強對手</th><th>備註</th></tr></thead><tbody>`;
     let s = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> { if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints; let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h; if(b.wins !== a.wins) return b.wins - a.wins; return b.sSOS - a.sSOS; });
     s.forEach((p,i)=>{ html += `<tr><td>${i+1}</td><td>${p.number}</td><td style="font-weight:bold; font-size:14px">${p.name}</td><td style="color:red; font-weight:bold; font-size:14px">${p.points}</td><td>${p.opponentPoints}</td><td>'${p.h2hDisplay || ""}</td><td>${p.wins}</td><td>${p.bWins}</td><td>${p.bCnt}</td><td>${p.sSOS}</td><td>${p.rankNote||""}</td></tr>`; });
     html += `</tbody></table><br>`;
     let trs = sysData.currentRound || 1;
-    html += `<h3>${sysData.title} 成績總表</h3>`;
+    html += `<h3>${getReportTitle('成績總表')}</h3>`;
     html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th colspan="5">基本資料</th>`;
     for(let i=1; i<=trs; i++) html += `<th colspan="3">第 ${i} 輪</th>`;
     html += `</tr><tr style="background-color:#2563eb; color:white;"><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>`;
@@ -1215,37 +1246,7 @@ function exportToExcel(){
         html += `</tr>`;
     });
     html += `</tbody></table></body></html>`;
-    const b = new Blob([html], {type:'application/vnd.ms-excel'}); const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `${sysData.title}_報表.xls`; document.body.appendChild(l); l.click(); l.remove();
-}
-
-function exportJSON() {
-    const dataStr = JSON.stringify(sysData, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const timeStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
-    link.download = `${sysData.title}_備份_${timeStr}.json`;
-    document.body.appendChild(link); link.click();
-    setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100);
-}
-function importJSON(input) { 
-    const f=input.files[0]; if(!f)return; 
-    const r=new FileReader(); 
-    r.onload=function(e){
-        try{
-            sysData=JSON.parse(e.target.result);
-            saveCurrentGroupData();
-            const gIndex = groups.findIndex(g => g.id === activeGroupId);
-            if(gIndex !== -1 && sysData.settings.themeColor) {
-                groups[gIndex].color = sysData.settings.themeColor;
-                groups[gIndex].name = sysData.title;
-                saveGroupsIndex();
-            }
-            location.reload();
-        }catch(err){alert("檔案錯誤");}
-    }; 
-    r.readAsText(f); 
+    const b = new Blob([html], {type:'application/vnd.ms-excel'}); const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `${sysData.info.eventName}_報表.xls`; document.body.appendChild(l); l.click(); l.remove();
 }
 
 function openStatusModal(){ 
@@ -1266,277 +1267,81 @@ function renderSummaryTable() { updateScores(); let t=document.getElementById('s
 
 async function generateNextRoundWithEffect() {
     if(viewingRound !== sysData.currentRound && sysData.currentRound > 0) return alert("請先切換至最新一輪");
-    if(sysData.currentRound > 0){ 
-        const unfinished = sysData.pairings.filter(p => p.round <= sysData.currentRound && p.result === null);
-        if(unfinished.length > 0) return alert(`第 ${unfinished[0].round} 輪還有成績未填寫！`);
-    }
-
-    const overlay = document.getElementById('loadingOverlay');
-    const mainTxt = document.getElementById('loadingMainText');
-    const subTxt = document.getElementById('loadingSubText');
-    const loadingMsgs = ["正在計算積分權重...", "分析對手強弱係數...", "檢查同隊迴避規則...", "正在優化先後手平衡...", "生成對戰組合...", "校驗歷史對戰紀錄..."];
-    
-    overlay.style.display = 'flex';
-    let step = 0;
-    const interval = setInterval(() => {
-        mainTxt.innerText = `PAIRING ROUND ${sysData.currentRound + 1}`;
-        subTxt.innerText = loadingMsgs[Math.floor(Math.random() * loadingMsgs.length)];
-        step++;
-    }, 250);
-
-    await new Promise(r => setTimeout(r, 2000));
-    clearInterval(interval);
-    generateNextRound(); 
-    overlay.style.display = 'none';
+    if(sysData.currentRound > 0){ const unfinished = sysData.pairings.filter(p => p.round <= sysData.currentRound && p.result === null); if(unfinished.length > 0) return alert(`第 ${unfinished[0].round} 輪還有成績未填寫！`); }
+    const overlay = document.getElementById('loadingOverlay'); const mainTxt = document.getElementById('loadingMainText'); const subTxt = document.getElementById('loadingSubText'); const loadingMsgs = ["正在計算積分權重...", "分析對手強弱係數...", "檢查同隊迴避規則...", "正在優化先後手平衡...", "生成對戰組合...", "校驗歷史對戰紀錄..."];
+    overlay.style.display = 'flex'; let step = 0; const interval = setInterval(() => { mainTxt.innerText = `PAIRING ROUND ${sysData.currentRound + 1}`; subTxt.innerText = loadingMsgs[Math.floor(Math.random() * loadingMsgs.length)]; step++; }, 250);
+    await new Promise(r => setTimeout(r, 2000)); clearInterval(interval); generateNextRound(); overlay.style.display = 'none';
 }
-</script>
-<script>
-/* --- 種子抽籤模組 (移植版) --- */
+
+/* --- Seed Draw (Unchanged) --- */
 function runSeedDraw() {
-    const input = document.getElementById('playerInput');
-    const txt = input.value.trim();
-    if (!txt) return alert('請先輸入選手名單');
-
-    let rawNames = txt.split('\n').map(n => n.replace(/^\d+[\.\s、]*/, '').trim()).filter(n => n);
-    if (rawNames.length < 2) return alert('選手人數不足');
-
+    const input = document.getElementById('playerInput'); const txt = input.value.trim(); if (!txt) return alert('請先輸入選手名單');
+    let rawNames = txt.split('\n').map(n => n.replace(/^\d+[\.\s、]*/, '').trim()).filter(n => n); if (rawNames.length < 2) return alert('選手人數不足');
     let players = rawNames.map((name, i) => ({ name: name, originalIndex: i, type: getPlayerType(name), level: getPlayerLevel(name) }));
-    let result = performSeedDraw(players);
-    let adjustResult = adjustTopPlayerOddEven(result.arrangement);
-    let finalArrangement = adjustResult.arrangement;
-    let newText = finalArrangement.map((p, i) => `${i + 1} ${p.name}`).join('\n');
-    input.value = newText;
+    let result = performSeedDraw(players); let adjustResult = adjustTopPlayerOddEven(result.arrangement); let finalArrangement = adjustResult.arrangement;
+    let newText = finalArrangement.map((p, i) => `${i + 1} ${p.name}`).join('\n'); input.value = newText;
     showSeedReportModal(finalArrangement, result.score, adjustResult);
 }
-
 function showSeedReportModal(arrangement, score, adjustResult) {
-    let html = '';
-    let danPlayers = arrangement.filter(p => p.type === 'dan');
-    let sPlayers = arrangement.filter(p => p.type === 'letter' && p.level === 'S');
-    
+    let html = ''; let danPlayers = arrangement.filter(p => p.type === 'dan'); let sPlayers = arrangement.filter(p => p.type === 'letter' && p.level === 'S');
     html += `<div style="background:#fff7ed; padding:10px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;"><strong>📊 抽籤摘要</strong><br>總人數：${arrangement.length} 人<br>`;
-    if (danPlayers.length > 0) {
-        let maxDan = Math.max(...danPlayers.map(p => p.level));
-        let topCount = danPlayers.filter(p => p.level === maxDan).length;
-        html += `最高段位：${maxDan}段 (${topCount}人) - 已分散<br>`;
-    }
+    if (danPlayers.length > 0) { let maxDan = Math.max(...danPlayers.map(p => p.level)); let topCount = danPlayers.filter(p => p.level === maxDan).length; html += `最高段位：${maxDan}段 (${topCount}人) - 已分散<br>`; }
     if (sPlayers.length > 0) { html += `S級選手：${sPlayers.length}人 - 已分散<br>`; }
     html += `違規分數：${score} ${score === 0 ? '🎉 (完美)' : ''}</div>`;
-
     if (adjustResult.adjusted) { html += `<div style="margin-bottom:15px; font-size:0.9rem; color:#d97706;"><strong>⚖️ 奇偶平衡調整</strong><br>${adjustResult.message.replace(/\n/g, '<br>')}</div>`; }
     html += `<strong>📋 前 10 名預覽 & 檢測：</strong><ul style="padding-left:20px; margin-top:5px;">`;
-    
     for(let i=0; i<Math.min(arrangement.length, 10); i+=2) {
         if(i+1 >= arrangement.length) { html += `<li>第 ${i+1} 桌：${arrangement[i].name} (輪空)</li>`; break; }
-        let p1 = arrangement[i], p2 = arrangement[i+1];
-        let warning = "";
-        let penalty = 0;
-        if (p1.type === 'letter' && p2.type === 'letter') penalty = calculateLetterPenalty(p1.level, p2.level);
-        else if (p1.type === 'dan' && p2.type === 'dan') penalty = calculateDanPenalty(p1.level, p2.level);
+        let p1 = arrangement[i], p2 = arrangement[i+1]; let warning = ""; let penalty = 0;
+        if (p1.type === 'letter' && p2.type === 'letter') penalty = calculateLetterPenalty(p1.level, p2.level); else if (p1.type === 'dan' && p2.type === 'dan') penalty = calculateDanPenalty(p1.level, p2.level);
         if(penalty > 0) warning = `<span style="color:red; font-weight:bold; margin-left:5px;">⚠️ 碰撞</span>`;
         html += `<li>第 ${i/2+1} 桌：${p1.name} vs ${p2.name} ${warning}</li>`;
     }
-    html += `<li>... (共 ${Math.ceil(arrangement.length/2)} 桌)</li></ul>`;
-    html += `<p style="font-size:0.85rem; color:#666; margin-top:10px;">* 名單已自動更新至輸入框，請點擊「初始化本組賽程」開始比賽。</p>`;
-    document.getElementById('seedReportContent').innerHTML = html;
-    document.getElementById('seedReportModal').style.display = 'flex';
+    html += `<li>... (共 ${Math.ceil(arrangement.length/2)} 桌)</li></ul><p style="font-size:0.85rem; color:#666; margin-top:10px;">* 名單已自動更新至輸入框，請點擊「初始化首輪配對」開始比賽。</p>`;
+    document.getElementById('seedReportContent').innerHTML = html; document.getElementById('seedReportModal').style.display = 'flex';
 }
-
 function adjustTopPlayerOddEven(arrangement) {
-    let topPlayers = [];
-    let hasS = arrangement.some(p => p.type === 'letter' && p.level === 'S');
-    let hasDan = arrangement.some(p => p.type === 'dan');
+    let topPlayers = []; let hasS = arrangement.some(p => p.type === 'letter' && p.level === 'S'); let hasDan = arrangement.some(p => p.type === 'dan');
     if (hasS) { arrangement.forEach((p, i) => { if(p.type==='letter' && p.level==='S') topPlayers.push({idx:i, isOdd:(i+1)%2!==0, name:p.name}); }); }
-    else if (hasDan) {
-        let maxDan = Math.max(...arrangement.filter(p=>p.type==='dan').map(p=>p.level));
-        arrangement.forEach((p, i) => { if(p.type==='dan' && p.level===maxDan) topPlayers.push({idx:i, isOdd:(i+1)%2!==0, name:p.name}); });
-    }
+    else if (hasDan) { let maxDan = Math.max(...arrangement.filter(p=>p.type==='dan').map(p=>p.level)); arrangement.forEach((p, i) => { if(p.type==='dan' && p.level===maxDan) topPlayers.push({idx:i, isOdd:(i+1)%2!==0, name:p.name}); }); }
     if (topPlayers.length === 0) return { arrangement: arrangement, adjusted: false, message: '' };
-
-    let oddCount = topPlayers.filter(p => p.isOdd).length;
-    let evenCount = topPlayers.length - oddCount;
+    let oddCount = topPlayers.filter(p => p.isOdd).length; let evenCount = topPlayers.length - oddCount;
     if (Math.abs(oddCount - evenCount) <= 1) return { arrangement: arrangement, adjusted: false, message: '' };
-
-    let newArr = [...arrangement];
-    let log = [];
-    let diff = Math.floor(Math.abs(oddCount - evenCount) / 2);
-    let toEven = oddCount > evenCount;
-    let targetPlayers = topPlayers.filter(p => p.isOdd === toEven);
-    
+    let newArr = [...arrangement]; let log = []; let diff = Math.floor(Math.abs(oddCount - evenCount) / 2); let toEven = oddCount > evenCount; let targetPlayers = topPlayers.filter(p => p.isOdd === toEven);
     for (let i = 0; i < diff && i < targetPlayers.length; i++) {
-        let tIdx = targetPlayers[i].idx;
-        let swapIdx = (tIdx + 1 < newArr.length) ? tIdx + 1 : tIdx - 1;
-        if (swapIdx >= 0 && swapIdx < newArr.length) {
-            [newArr[tIdx], newArr[swapIdx]] = [newArr[swapIdx], newArr[tIdx]];
-            log.push(`位置 ${tIdx+1} (${newArr[swapIdx].name}) 與 ${swapIdx+1} 交換`);
-        }
+        let tIdx = targetPlayers[i].idx; let swapIdx = (tIdx + 1 < newArr.length) ? tIdx + 1 : tIdx - 1;
+        if (swapIdx >= 0 && swapIdx < newArr.length) { [newArr[tIdx], newArr[swapIdx]] = [newArr[swapIdx], newArr[tIdx]]; log.push(`位置 ${tIdx+1} (${newArr[swapIdx].name}) 與 ${swapIdx+1} 交換`); }
     }
     return { arrangement: newArr, adjusted: true, message: `修正奇偶分佈：原奇${oddCount}/偶${evenCount}。\n` + log.join('\n') };
 }
-
-function getPlayerType(name) {
-    if (/[SABCT]$/i.test(name)) return 'letter';
-    if (/(\d+|[一二三四五六七八九十]+)段$/.test(name)) return 'dan';
-    return 'none';
-}
-function getPlayerLevel(name) {
-    let type = getPlayerType(name);
-    if (type === 'letter') return name.trim().slice(-1).toUpperCase();
-    if (type === 'dan') {
-        let m = name.match(/(\d+)段$/);
-        if (m) return parseInt(m[1]);
-        let cm = name.match(/([一二三四五六七八九十]+)段$/);
-        if (cm) return chineseNumberToArabic(cm[1]);
-    }
-    return 0;
-}
-function chineseNumberToArabic(chinese) {
-    const map = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};
-    if (chinese.length === 1) return map[chinese] || 0;
-    if (chinese.startsWith('十')) return 10 + (map[chinese[1]] || 0);
-    return 0;
-}
+function getPlayerType(name) { if (/[SABCT]$/i.test(name)) return 'letter'; if (/(\d+|[一二三四五六七八九十]+)段$/.test(name)) return 'dan'; return 'none'; }
+function getPlayerLevel(name) { let type = getPlayerType(name); if (type === 'letter') return name.trim().slice(-1).toUpperCase(); if (type === 'dan') { let m = name.match(/(\d+)段$/); if (m) return parseInt(m[1]); let cm = name.match(/([一二三四五六七八九十]+)段$/); if (cm) return chineseNumberToArabic(cm[1]); } return 0; }
+function chineseNumberToArabic(chinese) { const map = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10}; if (chinese.length === 1) return map[chinese] || 0; if (chinese.startsWith('十')) return 10 + (map[chinese[1]] || 0); return 0; }
 function performSeedDraw(players) {
-    let letterP = players.filter(p => p.type === 'letter');
-    let danP = players.filter(p => p.type === 'dan');
-    let otherP = players.filter(p => p.type === 'none');
-    let arrangement;
-    let sPlayers = letterP.filter(p => p.level === 'S');
-
-    if (danP.length > 0) { arrangement = performDistributedDraw(danP, letterP.concat(otherP), 'dan'); } 
-    else if (sPlayers.length > 0) { arrangement = performDistributedDraw(sPlayers, letterP.filter(p=>p.level!=='S').concat(otherP), 'S'); } 
-    else if (letterP.length > 0) { arrangement = performLetterDraw(letterP.concat(otherP)); } 
-    else { arrangement = shuffleArray(players); }
-
-    let score = calculateScore(arrangement);
-    return { arrangement: arrangement, score: score };
+    let letterP = players.filter(p => p.type === 'letter'); let danP = players.filter(p => p.type === 'dan'); let otherP = players.filter(p => p.type === 'none'); let arrangement; let sPlayers = letterP.filter(p => p.level === 'S');
+    if (danP.length > 0) { arrangement = performDistributedDraw(danP, letterP.concat(otherP), 'dan'); } else if (sPlayers.length > 0) { arrangement = performDistributedDraw(sPlayers, letterP.filter(p=>p.level!=='S').concat(otherP), 'S'); } else if (letterP.length > 0) { arrangement = performLetterDraw(letterP.concat(otherP)); } else { arrangement = shuffleArray(players); }
+    let score = calculateScore(arrangement); return { arrangement: arrangement, score: score };
 }
 function performDistributedDraw(seedPlayers, otherPlayers, mode) {
-    let topSeeds, lowerSeeds;
-    if (mode === 'dan') {
-        let maxDan = Math.max(...seedPlayers.map(p => p.level));
-        topSeeds = seedPlayers.filter(p => p.level === maxDan);
-        lowerSeeds = seedPlayers.filter(p => p.level < maxDan);
-    } else { topSeeds = seedPlayers; lowerSeeds = []; }
-
-    let pool = lowerSeeds.concat(otherPlayers);
-    topSeeds = shuffleArray(topSeeds); pool = shuffleArray(pool);
-    let total = topSeeds.length + pool.length;
-    let arrangement = new Array(total);
-    let numSeeds = topSeeds.length;
-    if (numSeeds === 0) return shuffleArray(seedPlayers.concat(otherPlayers));
-
-    let baseInterval = Math.floor(total / numSeeds);
-    let positions = [];
-    let firstPos = Math.random() < 0.5 ? 1 : 2; 
-    for (let i = 0; i < numSeeds; i++) positions.push(firstPos + i * baseInterval);
-    for (let i = 1; i < numSeeds; i++) { if (positions[i] <= positions[i-1]) positions[i] = positions[i-1] + 1; }
-    positions = positions.map(p => Math.min(p, total));
-
-    positions.forEach((pos, i) => {
-        if (!arrangement[pos-1]) arrangement[pos-1] = topSeeds[i];
-        else {
-            let k = pos-1;
-            while(arrangement[k] && k < total) k++;
-            if (k < total) arrangement[k] = topSeeds[i];
-        }
-    });
-    let pIdx = 0;
-    for (let i = 0; i < total; i++) { if (!arrangement[i]) { arrangement[i] = pool[pIdx++]; } }
-    arrangement = arrangement.filter(x => x);
-    return optimizeArrangement(arrangement, mode);
+    let topSeeds, lowerSeeds; if (mode === 'dan') { let maxDan = Math.max(...seedPlayers.map(p => p.level)); topSeeds = seedPlayers.filter(p => p.level === maxDan); lowerSeeds = seedPlayers.filter(p => p.level < maxDan); } else { topSeeds = seedPlayers; lowerSeeds = []; }
+    let pool = lowerSeeds.concat(otherPlayers); topSeeds = shuffleArray(topSeeds); pool = shuffleArray(pool);
+    let total = topSeeds.length + pool.length; let arrangement = new Array(total); let numSeeds = topSeeds.length; if (numSeeds === 0) return shuffleArray(seedPlayers.concat(otherPlayers));
+    let baseInterval = Math.floor(total / numSeeds); let positions = []; let firstPos = Math.random() < 0.5 ? 1 : 2; 
+    for (let i = 0; i < numSeeds; i++) positions.push(firstPos + i * baseInterval); for (let i = 1; i < numSeeds; i++) { if (positions[i] <= positions[i-1]) positions[i] = positions[i-1] + 1; }
+    positions = positions.map(p => Math.min(p, total)); positions.forEach((pos, i) => { if (!arrangement[pos-1]) arrangement[pos-1] = topSeeds[i]; else { let k = pos-1; while(arrangement[k] && k < total) k++; if (k < total) arrangement[k] = topSeeds[i]; } });
+    let pIdx = 0; for (let i = 0; i < total; i++) { if (!arrangement[i]) { arrangement[i] = pool[pIdx++]; } }
+    arrangement = arrangement.filter(x => x); return optimizeArrangement(arrangement, mode);
 }
 function performLetterDraw(players) { return optimizeArrangement(shuffleArray(players), 'letter'); }
 function optimizeArrangement(initialArr, mode) {
-    let bestArr = [...initialArr];
-    let bestScore = calculateScore(bestArr);
-    let maxAttempts = 1000;
-    for (let i = 0; i < maxAttempts; i++) {
-        if (bestScore === 0) break;
-        let curr = [...bestArr];
-        let idx1 = Math.floor(Math.random() * curr.length);
-        let idx2 = Math.floor(Math.random() * curr.length);
-        [curr[idx1], curr[idx2]] = [curr[idx2], curr[idx1]];
-        let score = calculateScore(curr);
-        if (score < bestScore) { bestScore = score; bestArr = curr; }
-    }
+    let bestArr = [...initialArr]; let bestScore = calculateScore(bestArr); let maxAttempts = 1000;
+    for (let i = 0; i < maxAttempts; i++) { if (bestScore === 0) break; let curr = [...bestArr]; let idx1 = Math.floor(Math.random() * curr.length); let idx2 = Math.floor(Math.random() * curr.length); [curr[idx1], curr[idx2]] = [curr[idx2], curr[idx1]]; let score = calculateScore(curr); if (score < bestScore) { bestScore = score; bestArr = curr; } }
     return bestArr;
 }
-function calculateScore(arr) {
-    let score = 0;
-    for (let i = 0; i < arr.length - 1; i += 2) {
-        let p1 = arr[i], p2 = arr[i+1];
-        if (p1.type === 'letter' && p2.type === 'letter') score += calculateLetterPenalty(p1.level, p2.level);
-        else if (p1.type === 'dan' && p2.type === 'dan') score += calculateDanPenalty(p1.level, p2.level);
-    }
-    return score;
-}
-function calculateLetterPenalty(l1, l2) {
-    let p = 0;
-    if (l1==='S' && l2==='S') p+=1000;
-    if (l1==='A' && l2==='A') p+=500;
-    if ((l1==='S'&&l2==='A') || (l1==='A'&&l2==='S')) p+=300;
-    if (l1==='T' && l2==='T') p+=200;
-    return p;
-}
-function calculateDanPenalty(d1, d2) {
-    let min = Math.min(d1, d2);
-    if (min >= 8) return 2000;
-    if (min >= 7) return 1500;
-    if (min >= 6) return 1000;
-    if (min >= 5) return 700;
-    if (min >= 4) return 400;
-    return 0;
-}
-function shuffleArray(array) {
-    let newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
-}
-</script>
-<script>
-(function() {
-    const iconBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADIAQMAAACXljzdAAAABlBMVEUAkt7///+31gVIAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAK0lEQVRYw+3PMQ0AAAgDsMlHgnV0Mxc76QMWAQAAAAAAAAAAAAAAAADgWwOQeABy1Z7OQAAAAABJRU5ErkJggg=="; 
-    const manifest = { "name": "瑞士制 V16", "short_name": "瑞士制 V16", "start_url": ".", "display": "standalone", "background_color": "#f0f9ff", "theme_color": "#3b82f6", "orientation": "portrait", "icons": [ { "src": iconBase64, "sizes": "192x192", "type": "image/png" }, { "src": iconBase64, "sizes": "512x512", "type": "image/png" } ] };
-    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(manifestBlob);
-    const link = document.createElement('link');
-    link.rel = 'manifest'; link.href = manifestURL; document.head.appendChild(link);
-
-    const metaTags = [ {name: 'apple-mobile-web-app-capable', content: 'yes'}, {name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent'}, {name: 'apple-mobile-web-app-title', content: '瑞士制V16'}, {name: 'mobile-web-app-capable', content: 'yes'} ];
-    metaTags.forEach(t => { const m = document.createElement('meta'); m.name = t.name; m.content = t.content; document.head.appendChild(m); });
-    const linkIcon = document.createElement('link'); linkIcon.rel = 'apple-touch-icon'; linkIcon.href = iconBase64; document.head.appendChild(linkIcon);
-
-    let deferredPrompt;
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const installBtn = document.createElement('button');
-    installBtn.className = 'nav-item';
-    installBtn.style.cssText = "display:none; background: linear-gradient(135deg, #f59e0b, #d97706); color:white; border:none;";
-    installBtn.innerHTML = "📲 安裝";
-    const nav = document.querySelector('.nav-pills');
-    if(nav) nav.appendChild(installBtn);
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block';
-        installBtn.onclick = () => { installBtn.style.display = 'none'; deferredPrompt.prompt(); deferredPrompt.userChoice.then((choiceResult) => { deferredPrompt = null; }); };
-    });
-
-    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-    if (isIOS && !isInStandaloneMode) {
-        installBtn.style.display = 'block';
-        installBtn.onclick = () => { alert("👉 iOS 安裝教學：\n\n1. 點擊瀏覽器下方的「分享」按鈕 (方框箭頭)。\n2. 滑動選單找到「加入主畫面」。\n3. 點擊右上角的「加入」。"); };
-    }
-    
-    if ('serviceWorker' in navigator) {
-       const swCode = "self.addEventListener('fetch', function(event) { return; });";
-       const swBlob = new Blob([swCode], {type: 'text/javascript'});
-       const swUrl = URL.createObjectURL(swBlob);
-       navigator.serviceWorker.register(swUrl).catch(e => console.log(e));
-    }
-})();
+function calculateScore(arr) { let score = 0; for (let i = 0; i < arr.length - 1; i += 2) { let p1 = arr[i], p2 = arr[i+1]; if (p1.type === 'letter' && p2.type === 'letter') score += calculateLetterPenalty(p1.level, p2.level); else if (p1.type === 'dan' && p2.type === 'dan') score += calculateDanPenalty(p1.level, p2.level); } return score; }
+function calculateLetterPenalty(l1, l2) { let p = 0; if (l1==='S' && l2==='S') p+=1000; if (l1==='A' && l2==='A') p+=500; if ((l1==='S'&&l2==='A') || (l1==='A'&&l2==='S')) p+=300; if (l1==='T' && l2==='T') p+=200; return p; }
+function calculateDanPenalty(d1, d2) { let min = Math.min(d1, d2); if (min >= 8) return 2000; if (min >= 7) return 1500; if (min >= 6) return 1000; if (min >= 5) return 700; if (min >= 4) return 400; return 0; }
+function shuffleArray(array) { let newArray = [...array]; for (let i = newArray.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [newArray[i], newArray[j]] = [newArray[j], newArray[i]]; } return newArray; }
 </script>
 </body>
 </html>
