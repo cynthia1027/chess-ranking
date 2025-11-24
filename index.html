@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>瑞士制積分編排系統 V17.5 (全域最優解版)</title>
+<title>瑞士制積分編排系統 V17.6 (介面優化版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
@@ -136,13 +136,28 @@ button:active { transform: scale(0.96); }
     margin-top: 15px; 
 }
 .match-card-ui { background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid #e2e8f0; position: relative; transition: border 0.2s, background 0.2s; }
-.match-header { background: #f8fafc; padding: 8px 15px; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub); border-bottom: 1px solid #e0f2fe; }
+.match-header { background: #f8fafc; padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: var(--text-sub); border-bottom: 1px solid #e0f2fe; }
 .match-content { display: flex; align-items: center; padding: 12px; justify-content: space-between; }
 .player-box { flex: 1; text-align: center; cursor: pointer; padding: 6px; border-radius: 8px; transition: 0.2s; }
 .player-box.selected { background: #fff7ed; border: 2px dashed #f59e0b; }
-.player-num-badge { display: inline-block; font-size: 0.75rem; background: #e2e8f0; color: #64748b; padding: 1px 6px; border-radius: 4px; margin-bottom: 2px; }
+
+/* UPDATE: Modified Player Badges and Score size */
+.player-num-badge { display: inline-block; font-size: 0.95rem; font-weight: bold; background: #e2e8f0; color: #475569; padding: 1px 8px; border-radius: 6px; margin-bottom: 4px; }
 .player-name { font-weight: 800; font-size: 1.2rem; display: block; line-height: 1.2; margin-bottom: 4px; }
-.player-score { font-size: 0.8rem; color: white; background: var(--text-sub); padding: 2px 8px; border-radius: 10px; opacity: 0.9; }
+.player-score { font-size: 0.95rem; color: white; background: var(--text-sub); padding: 3px 10px; border-radius: 12px; opacity: 0.9; font-weight: 500; }
+
+/* UPDATE: Table Number Box */
+.table-num-box {
+    background: var(--primary);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 900;
+    font-size: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    display: inline-block;
+}
+
 .vs-area { width: 110px; text-align: center; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .btn-res-group { display: flex; width: 100%; gap: 4px; }
 .btn-res { flex: 1; padding: 10px 0; font-size: 0.9rem; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; color: white; }
@@ -212,8 +227,8 @@ button:active { transform: scale(0.96); }
     .container, .modal, .group-bar { display: none !important; }
     #printSection, #printSection * { visibility: visible; box-sizing: border-box; }
     #printSection { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 0; background: white; }
-    @page { margin: 0; } 
-    body { margin: 0; padding-top: 10mm; }
+    @page { margin: 5mm; } 
+    body { margin: 0; padding-top: 5mm; }
 }
 
 /* Animations */
@@ -243,6 +258,23 @@ button:active { transform: scale(0.96); }
 .card-animate-enter { animation: cardEntrance 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
 @keyframes pulseSmall { 0% { transform: scale(1); } 50% { transform: scale(1.02); box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); } 100% { transform: scale(1); } }
 .card-update-pulse { animation: pulseSmall 0.3s ease-out; }
+
+@media screen {
+    body { 
+        width: 100vw !important; 
+        max-width: 100vw !important; 
+        min-width: 100vw !important;
+        overflow-x: auto !important; 
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .container {
+        max-width: 1200px !important;
+        margin: 0 auto !important;
+        padding: 20px !important;
+    }
+}
+
 </style>
 </head>
 <body class="theme-blue">
@@ -291,7 +323,7 @@ button:active { transform: scale(0.96); }
                     <input type="text" id="eventNameInput" class="form-input" placeholder="例如：2025 第五屆 快樂盃象棋錦標賽" onchange="saveCurrentGroupData()">
                 </div>
                 <div>
-                    <label class="form-label">賽事簡稱 (用於報表標題)</label>
+                    <label class="form-label">賽事簡稱 (用於對陣表)</label>
                     <input type="text" id="eventAbbrInput" class="form-input" placeholder="例如：2025快樂盃" onchange="saveCurrentGroupData()">
                 </div>
             </div>
@@ -534,15 +566,15 @@ button:active { transform: scale(0.96); }
     <div class="loading-sub" id="loadingSubText">Searching for Optimal Pairing...</div>
 </div>
 
+
 <script>
-/* --- V17 System Logic --- */
+/* --- V17.6 System Logic --- */
 const STORE_PREFIX = 'swiss_v17_';
 const MASTER_INDEX_KEY = 'swiss_v17_master_index';
 
 let groups = [];
 let activeGroupId = null;
 
-// V17 Data Structure Upgrade
 let sysData = {
     info: {
         eventName: "未命名賽事",
@@ -986,18 +1018,26 @@ function generateNextRound() {
     viewingRound = sysData.currentRound;
     const rd = sysData.currentRound;
 
-    // Filter and sort active players
+    // 1. 取得所有活躍選手
     let active = sysData.players.filter(p => !p.isBye && !p.isWithdrawn);
+    // 排序：積分 > 對手分 > 編號
     active.sort((a, b) => (b.points - a.points) || (b.opponentPoints - a.opponentPoints) || (a.number - b.number));
 
     let pairings = [];
     let byePlayer = null;
 
+    // 2. 修正後的輪空處理邏輯 (Strict Bye Check)
+    const byeDummyObj = sysData.players.find(p => p.isBye);
+    const byeDummyNum = byeDummyObj ? byeDummyObj.number : -1;
+
     if (active.length % 2 !== 0) {
         let byeIdx = -1;
         for (let i = active.length - 1; i >= 0; i--) {
-            let hasBye = active[i].results.includes("輪空勝"); 
-            if (!hasBye) {
+            let hasHadBye = false;
+            if (byeDummyNum !== -1) {
+                hasHadBye = active[i].opponents.includes(byeDummyNum);
+            }
+            if (!hasHadBye) {
                 byeIdx = i;
                 break;
             }
@@ -1006,22 +1046,17 @@ function generateNextRound() {
         byePlayer = active.splice(byeIdx, 1)[0];
     }
 
+
     // --- Cost Function (Exponential Penalty) ---
     function calculatePairingCost(p1, p2) {
         let cost = 0;
-        // 1. Score Difference (Exponential)
-        // Diff 0: 0
-        // Diff 1: 500 (Manageable)
-        // Diff 2: 50,000,000 (Prohibitive)
         let diff = Math.abs(p1.points - p2.points);
         if (diff === 1) cost += 500;
-        else if (diff >= 2) cost += 50000000 * diff; // Brutal penalty
+        else if (diff >= 2) cost += 50000000 * diff;
 
-        // 2. Color Compatibility
         let t1 = getColorTrend(p1), t2 = getColorTrend(p2);
-        if ((t1 === 1 && t2 === 1) || (t1 === -1 && t2 === -1)) cost += 50; // Try to avoid same streak
+        if ((t1 === 1 && t2 === 1) || (t1 === -1 && t2 === -1)) cost += 50; 
         
-        // 3. Color Balance
         let bal1 = (p1.colors.filter(c=>c==='先').length) - (p1.colors.filter(c=>c==='後').length);
         let bal2 = (p2.colors.filter(c=>c==='先').length) - (p2.colors.filter(c=>c==='後').length);
         if (bal1 * bal2 > 0) cost += 5;
@@ -1033,20 +1068,15 @@ function generateNextRound() {
         return p1.opponents.includes(p2.number);
     }
 
-    // --- Global Recursive Search with Time Limit ---
     let bestSolution = null;
     let bestSolutionCost = Infinity;
     const maxTime = 2000; // 2 seconds search limit
     const startTime = Date.now();
 
     function solveRecursively(currentPlayers, currentPairs, currentCost) {
-        // Time Check
         if ((Date.now() - startTime) > maxTime) return;
-        
-        // Pruning
         if (currentCost >= bestSolutionCost) return;
 
-        // Base Case
         if (currentPlayers.length === 0) {
             bestSolution = [...currentPairs];
             bestSolutionCost = currentCost;
@@ -1054,7 +1084,6 @@ function generateNextRound() {
         }
 
         let p1 = currentPlayers[0];
-        // Sort candidates by immediate cost to find good solutions early
         let candidates = [];
         for (let i = 1; i < currentPlayers.length; i++) {
             let p2 = currentPlayers[i];
@@ -1066,7 +1095,6 @@ function generateNextRound() {
 
         for (let cand of candidates) {
             let newCost = currentCost + cand.cost;
-            // Pruning lookahead
             if (newCost >= bestSolutionCost) continue;
 
             let nextPlayers = currentPlayers.filter((_, index) => index !== 0 && index !== cand.idx);
@@ -1074,20 +1102,17 @@ function generateNextRound() {
             
             solveRecursively(nextPlayers, currentPairs, newCost);
             
-            currentPairs.pop(); // Backtrack
-            if ((Date.now() - startTime) > maxTime) break; // Hard break
+            currentPairs.pop();
+            if ((Date.now() - startTime) > maxTime) break;
         }
     }
 
-    // 1. Try Strict No Repeats
     solveRecursively(active, [], 0);
 
-    // 2. Fallback (Allow Repeats if no solution found)
     if (!bestSolution) {
         alert("⚠️ 無法找到不重複對戰組合，系統將允許重複對戰。");
-        // Relax hasPlayed constraint
         function solveRelaxed(currentPlayers, currentPairs, currentCost) {
-            if ((Date.now() - startTime) > maxTime + 1000) return; // Extra time
+            if ((Date.now() - startTime) > maxTime + 1000) return;
             if (currentCost >= bestSolutionCost) return;
             if (currentPlayers.length === 0) {
                 bestSolution = [...currentPairs];
@@ -1097,7 +1122,7 @@ function generateNextRound() {
             let p1 = currentPlayers[0];
             for (let i = 1; i < currentPlayers.length; i++) {
                 let p2 = currentPlayers[i];
-                let cost = calculatePairingCost(p1, p2) + (hasPlayed(p1, p2) ? 100000 : 0); // Penalize repeats heavily
+                let cost = calculatePairingCost(p1, p2) + (hasPlayed(p1, p2) ? 100000 : 0);
                 let newCost = currentCost + cost;
                 if (newCost < bestSolutionCost) {
                     let nextPlayers = currentPlayers.filter((_, index) => index !== 0 && index !== i);
@@ -1117,7 +1142,6 @@ function generateNextRound() {
         return;
     }
 
-    // Assign Colors & Format
     bestSolution.forEach(pair => {
         let assigned = assignColors(pair.p1, pair.p2);
         pairings.push({round: rd, white: assigned.w, black: assigned.b, result: null});
@@ -1134,7 +1158,6 @@ function generateNextRound() {
     updateButtonsState();
 }
 
-// Logic Helper: Color Trend (1: Consecutive Red, -1: Consecutive Black, 0: Mixed)
 function getColorTrend(p) { 
     if(p.colors.length < 2) return 0; 
     let l1 = p.colors[p.colors.length-1];
@@ -1142,7 +1165,6 @@ function getColorTrend(p) {
     return (l1==='先' && l2==='先') ? 1 : (l1==='後' && l2==='後') ? -1 : 0; 
 }
 
-// Logic Helper: Assign Colors
 function assignColors(p1, p2) {
     let r1 = p1.colors.filter(c=>c==='先').length;
     let b1 = p1.colors.filter(c=>c==='後').length;
@@ -1152,41 +1174,52 @@ function assignColors(p1, p2) {
     let t1 = getColorTrend(p1);
     let t2 = getColorTrend(p2);
 
-    // 1. Mandatory Swap (Avoid 3 same colors)
-    if (t1 === 1 || t2 === -1) return {w: p2, b: p1}; // p1 needs Black, or p2 needs White
-    if (t1 === -1 || t2 === 1) return {w: p1, b: p2}; // p1 needs White, or p2 needs Black
+    if (t1 === 1 || t2 === -1) return {w: p2, b: p1};
+    if (t1 === -1 || t2 === 1) return {w: p1, b: p2};
 
-    // 2. Balance Equalization (Who needs balance more?)
-    let bal1 = r1 - b1; // Positive = more Red
+    let bal1 = r1 - b1;
     let bal2 = r2 - b2;
     
-    if (bal1 > bal2) return {w: p2, b: p1}; // p1 has more Reds, give p2 Red
+    if (bal1 > bal2) return {w: p2, b: p1};
     if (bal2 > bal1) return {w: p1, b: p2};
 
-    // 3. Alternation History (Tie-breaker)
-    // If last round p1 was Red, try to give Black
     if (p1.colors.length > 0 && p1.colors[p1.colors.length-1] === '先') {
         return {w: p2, b: p1};
     }
     
-    // 4. Random/Default
     return {w: p1, b: p2};
 }
 
 function deleteLastRound(){ if(sysData.currentRound===0||!confirm("刪除最新一輪？"))return; sysData.pairings=sysData.pairings.filter(p=>p.round<sysData.currentRound); sysData.currentRound--; viewingRound=sysData.currentRound||0; updateScores(); saveCurrentGroupData(); renderPairingList(true); updateButtonsState(); }
+
+/* --- UPDATE: Modified updateScores to allow partial data (Current State Export) --- */
 function updateScores(){
     const W=sysData.pointsConfig.win, D=sysData.pointsConfig.draw, L=sysData.pointsConfig.loss;
     sysData.players.forEach(p=>{ p.points=0; p.opponents=[]; p.colors=[]; p.results=[]; });
     sysData.pairings.forEach(p=>{
-        if(p.result===null)return; let w=sysData.players.find(x=>x.number===p.white.number), b=sysData.players.find(x=>x.number===p.black.number);
-        if(w&&b){ w.opponents.push(b.number); b.opponents.push(w.number); w.colors.push('先'); b.colors.push('後'); 
-        if(p.black.isBye){ w.points+=W; w.results.push('勝'); }
-        else { if(p.result===1){w.points+=W;b.points+=L;w.results.push('勝');b.results.push('負');} else if(p.result===0.5){w.points+=D;b.points+=D;w.results.push('和');b.results.push('和');} else{w.points+=L;b.points+=W;w.results.push('負');b.results.push('勝');} } }
+        // Even if result is null, we process the pairing for export/history purposes
+        let w=sysData.players.find(x=>x.number===p.white.number), b=sysData.players.find(x=>x.number===p.black.number);
+        if(w&&b){ 
+            w.opponents.push(b.number); b.opponents.push(w.number); 
+            w.colors.push('先'); b.colors.push('後'); 
+            
+            if(p.result === null) {
+                // Game in progress
+                w.results.push(''); b.results.push(''); 
+            } else if(p.black.isBye){ 
+                w.points+=W; w.results.push('勝'); 
+            } else { 
+                if(p.result===1){w.points+=W;b.points+=L;w.results.push('勝');b.results.push('負');} 
+                else if(p.result===0.5){w.points+=D;b.points+=D;w.results.push('和');b.results.push('和');} 
+                else{w.points+=L;b.points+=W;w.results.push('負');b.results.push('勝');} 
+            } 
+        }
     });
     const cr = sysData.settings.oppScoreRounds||5;
     sysData.players.forEach(p=>{ p.opponentPoints = p.opponents.map(o=>{ let op=sysData.players.find(x=>x.number===o); return (op&&!op.isBye)?op.points:0; }).sort((a,b)=>b-a).slice(0,cr).reduce((a,c)=>a+c,0); });
     sysData.players.forEach(p=>{ p.sSOS = p.opponents.reduce((a,o)=>{ let op=sysData.players.find(x=>x.number===o); return a+((op&&!op.isBye)?op.opponentPoints:0); },0); });
 }
+
 function calcScoreBeforeRound(num, tr) {
     let tot=0, W=sysData.pointsConfig.win, D=sysData.pointsConfig.draw, L=sysData.pointsConfig.loss;
     sysData.pairings.forEach(p=>{ if(p.round < tr && p.result!==null){ if(p.white.number===num){ tot+=(p.black.isBye||p.result===1)?W:(p.result===0.5?D:L); } else if(p.black.number===num){ tot+=(p.result===0)?W:(p.result===0.5?D:L); } } });
@@ -1205,7 +1238,6 @@ function renderPairingList(animate = false, highlightNumber = null){
         let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, viewingRound);
         let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, viewingRound);
         
-        // 檢查重複對戰
         let isRematch = false;
         if(!p.black.isBye && sysData.pairings.some(past => past.round < viewingRound && ((past.white.number===p.white.number && past.black.number===p.black.number) || (past.white.number===p.black.number && past.black.number===p.white.number)))) {
             isRematch = true;
@@ -1237,7 +1269,8 @@ function renderPairingList(animate = false, highlightNumber = null){
         
         let rematchBadge = isRematch ? `<div class="rematch-tag">⚠️ 重複對戰</div>` : '';
         
-        card.innerHTML = `${rematchBadge}<div class="match-header"><span>第 ${idx+1} 桌</span><span style="font-weight:bold;color:var(--primary)">ROUND ${viewingRound}</span></div><div class="match-content"><div class="player-box ${selW}" ${wClick}><span class="player-num-badge">#${p.white.number}</span><span class="player-name" style="color:#FF6347">${p.white.name}</span><span class="player-score">${wPts}分</span></div>${centerHTML}<div class="player-box ${selB}" ${bClick}>${p.black.isBye ? '' : `<span class="player-num-badge">#${p.black.number}</span>`}<span class="player-name" style="color:#1e3a8a">${p.black.isBye?'輪空':p.black.name}</span><span class="player-score">${bPts}分</span></div></div>`;
+        // UPDATE: Changed header for Table Box style
+        card.innerHTML = `${rematchBadge}<div class="match-header"><div class="table-num-box">第 ${idx+1} 桌</div><span style="font-weight:bold;color:var(--primary)">ROUND ${viewingRound}</span></div><div class="match-content"><div class="player-box ${selW}" ${wClick}><span class="player-num-badge">#${p.white.number}</span><span class="player-name" style="color:#FF6347">${p.white.name}</span><span class="player-score">${wPts}分</span></div>${centerHTML}<div class="player-box ${selB}" ${bClick}>${p.black.isBye ? '' : `<span class="player-num-badge">#${p.black.number}</span>`}<span class="player-name" style="color:#1e3a8a">${p.black.isBye?'輪空':p.black.name}</span><span class="player-score">${bPts}分</span></div></div>`;
         listDiv.appendChild(card);
     });
 }
@@ -1297,7 +1330,8 @@ function showPlayerHistory(n) {
     p.opponents.forEach((o, i) => {
         let op = sysData.players.find(x=>x.number===o);
         let opName = op ? (op.isBye ? "輪空" : `<span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:50%;margin-right:5px;font-size:0.8rem">${op.number}</span> ${op.name} <small>(${op.points}分)</small>`) : "未知";
-        let res = p.results[i]; let resClass = res==='勝'?'tag-win':(res==='負'?'tag-loss':'tag-draw');
+        let res = p.results[i] || '進行中';
+        let resClass = res==='勝'?'tag-win':(res==='負'?'tag-loss':(res==='和'?'tag-draw':''));
         html += `<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #eee"><span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:0.8rem;margin-right:10px;font-weight:bold">第${i+1}輪</span><div style="flex:1">${opName}</div><div style="width:30px;text-align:center;font-weight:bold">${p.colors[i]}</div><div style="width:50px;text-align:right"><span class="result-tag ${resClass}" style="padding:2px 8px;font-size:0.8rem">${res}</span></div></div>`;
     });
     document.getElementById('historyList').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無紀錄</div>';
@@ -1315,81 +1349,287 @@ const printThemes = { blue:{head:'#1e40af',row:'#eff6ff'}, green:{head:'#047857'
 function getThemeColorObj() { const tName = sysData.settings.themeColor || 'blue'; return printThemes[tName] || printThemes['blue']; }
 function getPortraitPrintStyle(theme) {
     return `<style>
-        @page { size: portrait; margin: 0; } body { margin: 0; padding: 0; }
-        .print-report-table { width: 90%; margin: 20px auto; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; border: 2px solid #333; }
-        .print-report-table th { background-color: ${theme.head} !important; color: white !important; padding: 4px 2px; text-align: center; vertical-align: middle !important; font-size: 13pt; font-weight: 900; border: 1px solid #999; height: 30px; -webkit-print-color-adjust: exact; }
-        .print-report-table td { padding: 6px 2px; text-align: center; vertical-align: middle !important; font-size: 16pt; color: #000; border: 1px solid #ccc; font-weight: 900; height: 36px; line-height: 1.2; white-space: nowrap; }
+        @page { size: portrait; margin: 5mm; } body { margin: 0; padding: 0; }
+        .print-report-table { width: 95%; margin: 10px auto; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; border: 2px solid #333; }
+        .print-report-table th { background-color: ${theme.head} !important; color: white !important; padding: 2px 2px; text-align: center; vertical-align: middle !important; font-size: 11pt; font-weight: 900; border: 1px solid #999; height: 26px; -webkit-print-color-adjust: exact; }
+        .print-report-table td { padding: 4px 2px; text-align: center; vertical-align: middle !important; font-size: 14pt; color: #000; border: 1px solid #ccc; font-weight: 900; height: 30px; line-height: 1.1; white-space: nowrap; }
         .print-report-table tr:nth-child(odd) td { background-color: #ffffff; }
         .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; }
-        .print-header { text-align: center; padding: 15px 0 5px 0; border-bottom: 2px solid #ddd; margin: 0 auto 5px auto; width: 90%; }
-        .print-header h1 { font-size: 24pt; color: #111; margin: 0; line-height: 1.1; }
-        .print-footer { display: flex; justify-content: space-between; margin-top: 5px; width: 90%; margin: 5px auto; font-size: 14pt; font-weight: bold; padding: 5px 10px; border-top: 1px solid #ccc; }
+        .print-header { text-align: center; padding: 5px 0 5px 0; border-bottom: 2px solid #ddd; margin: 0 auto 5px auto; width: 95%; }
+        .print-header h1 { font-size: 20pt; color: #111; margin: 0; line-height: 1.1; }
+        .print-footer { display: flex; justify-content: space-between; margin-top: 5px; width: 95%; margin: 5px auto; font-size: 12pt; font-weight: bold; padding: 5px 10px; border-top: 1px solid #ccc; }
         .win-res { color: #dc2626 !important; font-weight: 900 !important; } .loss-res { color: #2563eb !important; font-weight: 900 !important; } .draw-res { color: #16a34a !important; font-weight: 900 !important; } .bye-res { color: #d63384 !important; font-weight: 900 !important; }
         .vs-col { color: #94a3b8 !important; font-weight: bold; font-style: italic; }
-        .print-name-cell { font-size: 16pt !important; font-weight: 900 !important; }
-        .rank-score { font-size: 18pt !important; font-weight: 900 !important; }
-        .rank-top { color: #d97706; font-weight: 900; font-size: 16pt; }
+        .print-name-cell { font-size: 14pt !important; font-weight: 900 !important; }
+        .rank-score { font-size: 16pt !important; font-weight: 900 !important; }
+        .rank-top { color: #d97706; font-weight: 900; font-size: 14pt; }
         .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }
     </style>`;
 }
 
-// 報表標題產生器 (Updated for Group Name Only)
-function getReportTitle(type) {
-    const abbr = sysData.info.eventAbbr || sysData.info.eventName;
-    const grp = sysData.info.groupName || "公開組";
-    return `${abbr} ${grp} ${type}`;
-}
-
+// UPDATE: Pairing List HTML - Simplified Header & Removed Footer
 function getPairingListHTML(mode) {
-    const pairs = sysData.pairings.filter(p=>p.round === viewingRound);
-    pairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
-    const theme = getThemeColorObj();
-    // 賽前/賽後對陣表主標題：改為組別名稱 (V17.1)
-    let h = getPortraitPrintStyle(theme) + `
-    <div class="print-header">
-        <h1>${sysData.info.groupName} 第 ${viewingRound} 輪 ${mode==='pre'?'對陣表':'成績表'}</h1>
-        <div style="font-size:14pt;color:#666;margin-top:5px">${sysData.info.eventName}</div>
-    </div>
-    <table class="print-report-table">
-        <thead><tr><th width="8%">桌次</th><th width="8%">編號</th><th width="25%">紅方 (先)</th><th width="6%">分</th><th width="12%">結果</th><th width="6%">分</th><th width="8%">編號</th><th width="25%">黑方 (後)</th></tr></thead>
-        <tbody>`;
-    pairs.forEach((p,i)=>{
-        let res = mode==='pre'?"VS":""; let resClass = "vs-col";
-        if(mode==='post' && p.result!==null){
-            if(p.result===1){res="紅勝";resClass="win-res";} else if(p.result===0.5){res="和局";resClass="draw-res";} else if(p.result===0){res="黑勝";resClass="loss-res";}
-        }
-        if(p.black.isBye){res="輪空";resClass="bye-res";}
-        let wPts = p.white.isBye?'':calcScoreBeforeRound(p.white.number, mode==='pre'?viewingRound:viewingRound+1);
-        let bPts = p.black.isBye?'':calcScoreBeforeRound(p.black.number, mode==='pre'?viewingRound:viewingRound+1);
-        h += `<tr><td>${i+1}</td><td>${p.white.number}</td><td class="print-name-cell">${p.white.name}</td><td class="rank-score export-red-text">${wPts}</td><td class="${resClass}" style="font-size:13pt">${res}</td><td class="rank-score export-red-text">${bPts}</td><td>${p.black.isBye?'':p.black.number}</td><td class="print-name-cell">${p.black.isBye?'輪空':p.black.name}</td></tr>`;
+    const pairs = sysData.pairings.filter(p => p.round === viewingRound);
+    pairs.sort((a, b) => {
+        if (a.black.isBye) return 1;
+        if (b.black.isBye) return -1;
+        return 0;
     });
-    h += `</tbody></table><div class="print-footer"><span>裁判長：${sysData.signatures.ref}</span><span>列印時間：${new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'})}</span><span>賽務長：${sysData.signatures.dir}</span></div>`;
+
+    const matchCount = pairs.length;
+    const theme = getThemeColorObj();
+    const abbr = sysData.info.eventAbbr || sysData.info.eventName;
+    const typeText = mode === 'pre' ? '對陣表' : '成績表';
+    const fullTitle = `${abbr} 第 ${viewingRound} 輪 ${typeText}`;
+
+    // --- 動態排版計算 ---
+    // A4 直式可用高度 (扣除標題與邊界)
+    const availableHeightMM = 260; 
+    let calculatedRowHeight = Math.floor(availableHeightMM / (matchCount + 1)); 
+    
+    // 限制：最大 25mm，最小 7mm
+    if (calculatedRowHeight > 25) calculatedRowHeight = 25; 
+    if (calculatedRowHeight < 7) calculatedRowHeight = 7;
+
+    // 字體大小：稍微調降係數 (0.65 -> 0.60) 以避免橫向撐爆，但維持視覺飽滿
+    let dynamicFontSize = Math.floor(calculatedRowHeight * 0.8 * 2.83); 
+    if (dynamicFontSize > 22) dynamicFontSize = 22; 
+    if (dynamicFontSize < 10) dynamicFontSize = 10;
+
+    const css = `<style>
+        @page { size: portrait; margin: 6mm; } /* 邊距稍微縮小一點點，爭取橫向空間 */
+        body { margin: 0; padding: 0; font-family: "Noto Sans TC", sans-serif; }
+        
+        .print-container { 
+            width: 100%; 
+            height: 98vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; /* 防止溢出 */
+        }
+        
+        .print-header { text-align: center; height: 40px; line-height: 40px; border-bottom: 3px solid #333; margin-bottom: 5px; flex-shrink: 0; }
+        .print-header h1 { font-size: 22pt; color: #000; margin: 0; font-weight: 900; letter-spacing: 2px; }
+
+        /* 關鍵：固定表格佈局，確保不超出寬度 */
+        .print-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            border: 2px solid #000; 
+            flex-grow: 1; 
+            table-layout: fixed; 
+        }
+        
+        .print-table th { 
+            background-color: ${theme.head} !important; 
+            color: white !important; 
+            height: 30px; 
+            font-size: 13pt; /* 標題字適中即可 */
+            font-weight: 900; 
+            border: 1px solid #000; 
+            -webkit-print-color-adjust: exact; 
+        }
+
+        .print-table td { 
+            height: ${calculatedRowHeight}mm; 
+            font-size: ${dynamicFontSize}pt; 
+            text-align: center; 
+            vertical-align: middle; 
+            border: 1px solid #000; 
+            font-weight: 700; 
+            white-space: nowrap; /* 強制不換行 */
+            overflow: hidden;    /* 超出隱藏，避免撐開表格 */
+            color: #000;
+            padding: 0;
+        }
+        .print-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; }
+
+        /* 桌號樣式 - 縮小一點以適應窄欄 */
+        .table-badge {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #222;
+            color: #fff !important;
+            border-radius: 6px;
+            width: 80%;
+            height: 70%;
+            margin: 0 auto;
+            font-family: 'Roboto Mono', monospace;
+            -webkit-print-color-adjust: exact;
+            font-size: 0.9em; /* 桌號數字稍微縮小一點以免擠壓 */
+        }
+        
+        .player-num-sub { color: #555; font-size: 0.6em; font-weight: normal; margin-right: 1px; vertical-align: middle; }
+        .name-cell { font-weight: 900; }
+        .score-red { color: #dc2626 !important; -webkit-print-color-adjust: exact; }
+        .win-res { color: #dc2626 !important; font-weight: 900; font-style: italic; font-size: 1.0em; } 
+        .loss-res { color: #2563eb !important; font-weight: 900; font-style: italic; font-size: 1.0em; } 
+        .draw-res { color: #16a34a !important; font-weight: 900; font-style: italic; font-size: 1.0em; }
+        .bye-res { color: #d63384 !important; font-weight: 900; font-size: 0.9em; }
+        .vs-col { color: #ccc; font-style: italic; font-family: serif; font-size: 0.8em; }
+    </style>`;
+
+    // --- 調整欄位寬度佔比 (總和 100%) ---
+    // 壓縮桌次、編號、分數，釋放空間給姓名
+    // 桌次:6%, 編號:7%, 姓名:25%, 分數:6%, 結果:8%
+    let h = css + `
+    <div class="print-container">
+        <div class="print-header"><h1>${fullTitle}</h1></div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th width="6%">桌次</th>
+                    <th width="7%">編號</th>
+                    <th width="25%">紅方 (先)</th>
+                    <th width="6%">分</th>
+                    <th width="8%">結果</th>
+                    <th width="6%">分</th>
+                    <th width="7%">編號</th>
+                    <th width="25%">黑方 (後)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    pairs.forEach((p, i) => {
+        let res = mode === 'pre' ? "VS" : "";
+        let resClass = "vs-col";
+        if (mode === 'post' && p.result !== null) {
+            if (p.result === 1) { res = "紅勝"; resClass = "win-res"; } 
+            else if (p.result === 0.5) { res = "和局"; resClass = "draw-res"; } 
+            else if (p.result === 0) { res = "黑勝"; resClass = "loss-res"; }
+        }
+        if (p.black.isBye) { res = "輪空"; resClass = "bye-res"; }
+
+        let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, mode === 'pre' ? viewingRound : viewingRound + 1);
+        let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, mode === 'pre' ? viewingRound : viewingRound + 1);
+
+        let wNumDisplay = `<span class="player-num-sub">#</span>${p.white.number}`;
+        let bNumDisplay = p.black.isBye ? '' : `<span class="player-num-sub">#</span>${p.black.number}`;
+
+        h += `<tr>
+            <td><div class="table-badge">${i + 1}</div></td>
+            <td>${wNumDisplay}</td>
+            <td class="name-cell">${p.white.name}</td>
+            <td class="score-red">${wPts}</td>
+            <td class="${resClass}">${res}</td>
+            <td class="score-red">${bPts}</td>
+            <td>${bNumDisplay}</td>
+            <td class="name-cell">${p.black.isBye ? '輪空' : p.black.name}</td>
+        </tr>`;
+    });
+
+    h += `</tbody></table></div>`;
     return h;
 }
 
+// UPDATE: Rankings HTML - Full Name, No Group if empty, Compact Page
 function getRankingsHTML() {
     updateRankings();
-    let s = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> {
+    let s = [...sysData.players].filter(p => !p.isBye).sort((a,b)=> {
         if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
         let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h; if(b.wins !== a.wins) return b.wins - a.wins; return b.sSOS - a.sSOS;
     });
+
     const theme = getThemeColorObj();
-    const titleStr = getReportTitle("名次表");
-    let h = getPortraitPrintStyle(theme) + `
-    <div class="print-header"><h1>${titleStr}</h1></div>
-    <table class="print-report-table">
-        <thead><tr><th width="6%">名次</th><th width="6%">編號</th><th width="16%">姓名</th><th width="8%">積分</th><th width="8%">對手分</th><th width="8%">對戰</th><th width="8%">勝局</th><th width="8%">後勝</th><th width="8%">後數</th><th width="8%">強對手</th><th width="16%">備註</th></tr></thead><tbody>`;
-    s.forEach((p,i)=>{
-        let rankDisplay = i===0?"🥇 1":(i===1?"🥈 2":(i===2?"🥉 3":i+1));
-        let rankClass = i<3?"rank-top":"";
-        h += `<tr><td class="${rankClass}">${rankDisplay}</td><td>${p.number}</td><td class="print-name-cell">${p.name}</td><td class="rank-score export-red-text">${p.points}</td><td>${p.opponentPoints}</td><td>${p.h2hDisplay}</td><td>${p.wins}</td><td>${p.bWins}</td><td>${p.bCnt}</td><td>${p.sSOS}</td><td style="font-size:12pt">${(p.rankNote||"")+(p.isWithdrawn?"(退)":"")}</td></tr>`;
+    const grp = sysData.info.groupName ? (" " + sysData.info.groupName) : "";
+    const titleStr = `${sysData.info.eventName}${grp} 名次表`;
+
+    // --- 動態排版 (Portrait A4) ---
+    // A4 直式高度約 270mm (扣除標題)
+    const availableHeightMM = 270;
+    const playerCount = s.length;
+    let calculatedRowHeight = Math.floor(availableHeightMM / (playerCount + 1));
+
+    // 限制：最大 15mm，最小 6mm (40人時約 6.5mm)
+    if (calculatedRowHeight > 15) calculatedRowHeight = 15;
+    if (calculatedRowHeight < 6) calculatedRowHeight = 6;
+
+    // 字體大小
+    let dynamicFontSize = Math.floor(calculatedRowHeight * 0.65 * 2.83);
+    if (dynamicFontSize > 16) dynamicFontSize = 16;
+    if (dynamicFontSize < 9) dynamicFontSize = 9;
+
+    let h = `<style>
+        @page { size: portrait; margin: 5mm; } 
+        body { margin: 0; padding: 0; font-family: "Noto Sans TC", sans-serif; }
+        .print-container { width: 98%; margin: 0 auto; height: 98vh; display: flex; flex-direction: column; }
+        .print-header { text-align: center; height: 35px; line-height: 35px; border-bottom: 2px solid #333; margin-bottom: 5px; flex-shrink: 0; }
+        .print-header h1 { font-size: 22pt; color: #111; margin: 0; }
+
+        .print-report-table { width: 100%; border-collapse: collapse; border: 2px solid #333; flex-grow: 1; }
+        .print-report-table th { 
+            background-color: ${theme.head} !important; 
+            color: white !important; 
+            text-align: center; 
+            font-size: 11pt; 
+            font-weight: 900; 
+            border: 1px solid #999; 
+            height: 25px; 
+            -webkit-print-color-adjust: exact; 
+        }
+        .print-report-table td { 
+            height: ${calculatedRowHeight}mm;
+            font-size: ${dynamicFontSize}pt;
+            text-align: center; 
+            color: #000; 
+            border: 1px solid #ccc; 
+            font-weight: 600; 
+            white-space: nowrap; 
+            padding: 0 2px;
+        }
+        .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; }
+        
+        .rank-top { color: #d97706; font-weight: 900; font-size: 1.1em; }
+        .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }
+        .name-cell { text-align: left; padding-left: 10px !important; }
+    </style>` + `
+    <div class="print-container">
+        <div class="print-header"><h1>${titleStr}</h1></div>
+        <table class="print-report-table">
+            <thead>
+                <tr>
+                    <th width="6%">名次</th>
+                    <th width="6%">編號</th>
+                    <th width="16%">姓名</th>
+                    <th width="8%">積分</th>
+                    <th width="8%">對手分</th>
+                    <th width="12%">對戰</th>
+                    <th width="6%">勝局</th>
+                    <th width="6%">後勝</th>
+                    <th width="6%">後數</th>
+                    <th width="8%">強對手</th>
+                    <th width="12%">備註</th>
+                </tr>
+            </thead>
+            <tbody>`;
+            
+    s.forEach((p, i) => {
+        let rankDisplay = i === 0 ? "🥇 1" : (i === 1 ? "🥈 2" : (i === 2 ? "🥉 3" : i + 1));
+        let rankClass = i < 3 ? "rank-top" : "";
+        h += `<tr>
+            <td class="${rankClass}">${rankDisplay}</td>
+            <td>${p.number}</td>
+            <td class="name-cell">${p.name}</td>
+            <td class="export-red-text">${p.points}</td>
+            <td>${p.opponentPoints}</td>
+            <td style="font-size:0.8em">${p.h2hDisplay}</td>
+            <td>${p.wins}</td>
+            <td>${p.bWins}</td>
+            <td>${p.bCnt}</td>
+            <td>${p.sSOS}</td>
+            <td style="font-size:0.8em">${(p.rankNote || "") + (p.isWithdrawn ? "(退)" : "")}</td>
+        </tr>`;
     });
-    h += `</tbody></table><div class="print-footer"><span>裁判長：${sysData.signatures.ref}</span><span>列印時間：${new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'})}</span><span>賽務長：${sysData.signatures.dir}</span></div>`;
+    h += `</tbody></table></div>`;
     return h;
 }
 
+// UPDATE: Summary HTML - Full Name, Columns Swapped, Empty Group Handling
 function getSummaryHTML() {
     updateScores(); 
+
+    // 1. 排序與排名
     let rankedList = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> {
         if(b.points !== a.points) return b.points - a.points; 
         if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
@@ -1401,33 +1641,70 @@ function getSummaryHTML() {
     });
     let rankMap = {};
     rankedList.forEach((p, i) => rankMap[p.number] = i + 1);
+    let displayList = [...sysData.players].filter(p=>!p.isBye).sort((a,b) => a.number - b.number);
 
     let trs = sysData.currentRound || 1; 
     const theme = getThemeColorObj();
-    const titleStr = getReportTitle("成績總表");
+    const grpName = sysData.info.groupName ? (" " + sysData.info.groupName) : "";
+    const titleStr = `${sysData.info.eventName}${grpName} 成績總表`;
+
+    // 動態行高計算
+    const playerCount = displayList.length;
+    const totalRows = playerCount + 2; 
+    let calculatedRowHeight = 170 / totalRows; // 稍微減少總高度以留空間給頁尾
+    if (calculatedRowHeight > 8) calculatedRowHeight = 8;
+    if (calculatedRowHeight < 4.0) calculatedRowHeight = 4.0; 
+    let dynamicFontSize = calculatedRowHeight * 0.75 * 2.83;
+    if (dynamicFontSize > 12) dynamicFontSize = 12;
+    if (dynamicFontSize < 9) dynamicFontSize = 9;
+
     let h = `<style>
     @page { size: landscape; margin: 5mm; } 
-    .print-report-table { width: 100%; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; margin-bottom: 5px; border: 2px solid #333; } 
-    .print-report-table th { background-color: ${theme.head} !important; color: white !important; padding: 4px 2px; text-align: center; font-size: 12pt; font-weight: 900; border: 1px solid #999; height: 28px; -webkit-print-color-adjust: exact; } 
-    .print-report-table td { padding: 1px 0px; text-align: center; font-size: 13.5pt; color: #000; border: 1px solid #ccc; font-weight: 600; height: 28px; line-height: 1.1; white-space: nowrap; } 
-    .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; } 
-    .print-header { text-align: center; padding: 5px 0; border-bottom: 2px solid #ddd; margin-bottom: 5px; } 
-    .print-header h1 { font-size: 24pt; color: #111; margin: 0; line-height: 1.1; } 
-    .print-footer { display: flex; justify-content: space-between; margin-top: 5px; font-size: 16pt; font-weight: bold; padding: 5px 10px; border-top: 1px solid #ccc; } 
-    .print-name-cell { font-size: 16pt !important; font-weight: 900 !important; } 
-    .rank-score { font-size: 18pt !important; font-weight: 900 !important; } 
-    .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }
-    .rank-badge { background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-block; line-height: 24px; text-align: center; font-size: 11pt; font-weight: bold; -webkit-print-color-adjust: exact; }
-    </style>` + `
-    <div class="print-header"><h1>${titleStr}</h1></div>
-    <table class="print-report-table" style="width:100%">
-        <thead><tr><th colspan="5">基本資料</th>${Array.from({length:trs},(_,i)=>`<th colspan="3">第 ${i+1} 輪</th>`).join('')}<th></th></tr>
-        <tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>${Array.from({length:trs},()=>`<th>對手</th><th>先後</th><th>結果</th>`).join('')}<th>排名</th></tr></thead><tbody>`;
+    body { 
+        font-family: "Noto Sans TC", sans-serif; 
+        -webkit-print-color-adjust: exact;
+    }
+    /* 列印時強制鎖定寬度 */
+    @media print {
+        body { width: 285mm !important; max-width: 285mm !important; }
+    }
     
-    sysData.players.filter(p=>!p.isBye).forEach(p=>{
+    .print-container { width: 100%; margin: 0 auto; }
+    .print-header { text-align: center; height: 30px; line-height: 30px; border-bottom: 2px solid #333; margin-bottom: 2px; }
+    .print-header h1 { font-size: 18pt; color: #111; margin: 0; }
+
+    .print-report-table { width: 100%; border-collapse: collapse; border: 2px solid #333; table-layout: fixed; } 
+    .print-report-table th { 
+        background-color: ${theme.head} !important; color: white !important; text-align: center; font-size: 10pt; font-weight: 900; border: 1px solid #999; height: 18px; overflow: hidden; 
+    } 
+    .print-report-table td { 
+        height: ${calculatedRowHeight}mm; font-size: ${dynamicFontSize}pt; text-align: center; color: #000; border: 1px solid #ccc; font-weight: 700; white-space: nowrap; padding: 0; overflow: hidden; line-height: ${calculatedRowHeight}mm; 
+    } 
+    .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; } 
+    
+    .print-name-cell { text-align: left !important; padding-left: 4px !important; }
+    .rank-score { color: #dc2626 !important; font-weight: 900 !important; }
+    .rank-badge { background: #000; color: #fff; border-radius: 3px; padding: 0 2px; display: inline-block; min-width: 18px; height: 16px; line-height: 16px; font-size: 0.85em; }
+    
+    /* 頁尾專用表格樣式，確保分開 */
+    .footer-table { width: 100%; border: none; margin-top: 5px; }
+    .footer-table td { border: none; text-align: left; font-size: 12pt; font-weight: bold; padding: 0 10px; height: auto; background: transparent !important; }
+    </style>` + `
+    <div class="print-container">
+        <div class="print-header"><h1>${titleStr}</h1></div>
+        <table class="print-report-table">
+            <thead>
+                <tr><th colspan="6">基本資料</th>${Array.from({length:trs},(_,i)=>`<th colspan="3">第 ${i+1} 輪</th>`).join('')}</tr>
+                <tr><th>編號</th><th>排名</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>${Array.from({length:trs},()=>`<th>對手</th><th>先後</th><th>結果</th>`).join('')}</tr>
+            </thead>
+            <tbody>`;
+    
+    displayList.forEach(p=>{
         let wCnt = p.colors.filter(c=>c==='先').length;
         let rank = rankMap[p.number] || '-';
-        h += `<tr><td>${p.number}</td><td class="print-name-cell">${p.name}</td><td class="rank-score export-red-text">${p.points}</td><td>${p.opponentPoints}</td><td>${wCnt}</td>`;
+        h += `<tr>
+            <td>${p.number}</td><td><span class="rank-badge">${rank}</span></td><td class="print-name-cell">${p.name}</td>
+            <td class="rank-score">${p.points}</td><td>${p.opponentPoints}</td><td>${wCnt}</td>`;
         for(let i=0; i<trs; i++){
             if(i<p.opponents.length){
                 let res = p.results[i];
@@ -1436,9 +1713,19 @@ function getSummaryHTML() {
                 h += `<td>${p.opponents[i]}</td><td style="${colorStyle}">${p.colors[i]}</td><td style="${resStyle}">${res}</td>`;
             } else h += '<td></td><td></td><td></td>';
         }
-        h += `<td><span class="rank-badge">${rank}</span></td></tr>`;
+        h += `</tr>`;
     });
-    h += `</tbody></table><div class="print-footer"><span>裁判長：${sysData.signatures.ref}</span><span>列印時間：${new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'})}</span><span>賽務長：${sysData.signatures.dir}</span></div>`;
+    
+    // UPDATE: 改用 Table 來做頁尾，保證絕對分開
+    h += `</tbody></table>
+    <table class="footer-table">
+        <tr>
+            <td width="33%">裁判長：${sysData.signatures.ref}</td>
+            <td width="34%" style="text-align:center">列印時間：${new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'})}</td>
+            <td width="33%" style="text-align:right">賽務長：${sysData.signatures.dir}</td>
+        </tr>
+    </table>
+    </div>`;
     return h;
 }
 
@@ -1464,7 +1751,6 @@ function printPairingCards(){
         .border-mid-thick { border-left: 3px double #000 !important; } .label-cell { font-size: 18px; font-weight: bold; }
     </style>`;
     let html = css;
-    // 對陣桌卡標題：改為組別名稱 (V17.1)
     for(let i=0; i<ps.length; i+=8){
         html += '<div class="print-page">';
         ps.slice(i, i+8).forEach((p, idx)=>{
@@ -1484,31 +1770,82 @@ function printPairingCards(){
 
 async function handleImageShare(htmlContent, filename) {
     const container = document.getElementById('printSection');
-    container.innerHTML = htmlContent; container.className = 'export-canvas-container'; container.style.display = 'block'; 
-    await new Promise(r => setTimeout(r, 300)); 
+    
+    // 1. 先清空，防止舊樣式干擾
+    container.innerHTML = '';
+    
+    // 2. 注入內容
+    container.innerHTML = htmlContent; 
+    container.className = 'export-canvas-container'; 
+    container.style.display = 'block'; 
+    container.style.backgroundColor = '#ffffff';
+
+    // 3. 針對截圖的特殊樣式修正 (防止截圖被切掉)
+    const styleFix = document.createElement('style');
+    styleFix.innerHTML = `
+        .print-container { height: auto !important; overflow: visible !important; }
+        body { overflow: visible !important; height: auto !important; width: auto !important; }
+        /* 截圖時強制背景白 */
+        table, th, td { background-color: white; }
+    `;
+    container.appendChild(styleFix);
+
+    await new Promise(r => setTimeout(r, 500)); 
+    
     try {
-        const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-        container.style.display = 'none';
+        const canvas = await html2canvas(container, { 
+            scale: 2, 
+            useCORS: true, 
+            backgroundColor: '#ffffff',
+            logging: false,
+            height: container.scrollHeight, 
+            windowHeight: container.scrollHeight
+        });
+        
         canvas.toBlob(async (blob) => {
-            if (navigator.share && navigator.canShare) { try { const file = new File([blob], filename + ".jpg", { type: "image/jpeg" }); if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; } } catch (err) {} }
-            const link = document.createElement('a'); link.download = filename + '.jpg'; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
+            if (navigator.share && navigator.canShare) { 
+                try { 
+                    const file = new File([blob], filename + ".jpg", { type: "image/jpeg" }); 
+                    if (navigator.canShare({ files: [file] })) { 
+                        await navigator.share({ files: [file] }); 
+                    } 
+                } catch (err) {} 
+            }
+            const link = document.createElement('a'); 
+            link.download = filename + '.jpg'; 
+            link.href = canvas.toDataURL('image/jpeg', 0.9); 
+            link.click();
         }, 'image/jpeg', 0.9);
-    } catch (err) { alert("圖片失敗"); container.style.display = 'none'; }
+
+    } catch (err) { 
+        console.error(err);
+        alert("圖片產生失敗"); 
+    } finally {
+        // 4. 【關鍵】截圖完成後，徹底隱藏並清空 HTML
+        // 這樣裡面的 <style>@page landscape</style> 就會消失
+        // 下次按列印按鈕時，瀏覽器就不會誤判為橫向
+        container.style.display = 'none'; 
+        container.innerHTML = ''; 
+    }
 }
 function shareImage(mode) { if(viewingRound===0)return alert("未選擇輪次"); handleImageShare(getPairingListHTML(mode), `${sysData.info.eventName}_R${viewingRound}_${mode==='pre'?'對陣':'成績'}`); }
-function shareRankingsImg() { handleImageShare(getRankingsHTML(), `${getReportTitle('名次表')}`); }
-function shareSummaryImg() { const container = document.getElementById('printSection'); container.style.width = "1400px"; handleImageShare(getSummaryHTML(), `${getReportTitle('成績總表')}`); }
+function shareRankingsImg() { handleImageShare(getRankingsHTML(), `${sysData.info.eventName}_名次表`); }
+function shareSummaryImg() { const container = document.getElementById('printSection'); container.style.width = "1400px"; handleImageShare(getSummaryHTML(), `${sysData.info.eventName}_成績總表`); }
 
+// UPDATE: Excel Export handles empty results (Current State)
 function exportToExcel(){
     updateRankings(); updateScores();
+    const grp = sysData.info.groupName ? (" " + sysData.info.groupName) : "";
+    const fullTitle = sysData.info.eventName + grp;
+
     let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>`;
-    html += `<h3>${getReportTitle('名次表')}</h3>`;
+    html += `<h3>${fullTitle} 名次表</h3>`;
     html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th>名次</th><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>對戰</th><th>勝局</th><th>後手勝</th><th>後手數</th><th>強對手</th><th>備註</th></tr></thead><tbody>`;
     let s = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> { if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints; let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h; if(b.wins !== a.wins) return b.wins - a.wins; return b.sSOS - a.sSOS; });
     s.forEach((p,i)=>{ html += `<tr><td>${i+1}</td><td>${p.number}</td><td style="font-weight:bold; font-size:14px">${p.name}</td><td style="color:red; font-weight:bold; font-size:14px">${p.points}</td><td>${p.opponentPoints}</td><td>'${p.h2hDisplay || ""}</td><td>${p.wins}</td><td>${p.bWins}</td><td>${p.bCnt}</td><td>${p.sSOS}</td><td>${p.rankNote||""}</td></tr>`; });
     html += `</tbody></table><br>`;
     let trs = sysData.currentRound || 1;
-    html += `<h3>${getReportTitle('成績總表')}</h3>`;
+    html += `<h3>${fullTitle} 成績總表</h3>`;
     html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th colspan="5">基本資料</th>`;
     for(let i=1; i<=trs; i++) html += `<th colspan="3">第 ${i} 輪</th>`;
     html += `</tr><tr style="background-color:#2563eb; color:white;"><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>`;
@@ -1519,9 +1856,10 @@ function exportToExcel(){
         html += `<tr><td>${p.number}</td><td style="font-weight:bold; font-size:14px">${p.name}</td><td style="color:red; font-weight:bold; font-size:14px">${p.points}</td><td>${p.opponentPoints}</td><td>${wCnt}</td>`;
         for(let i=0; i<trs; i++){
             if(i < p.opponents.length){
-                let res = p.results[i]; let color = p.colors[i];
+                let res = p.results[i] || '進行中'; // Show Pending if empty
+                let color = p.colors[i];
                 let bgStyle = color === '先' ? 'background-color:#ffecd9' : 'background-color:#dbeafe';
-                let fontStyle = res === '勝' ? "color:red; font-weight:bold" : (res === '負' ? "color:blue; font-weight:bold" : "color:green; font-weight:bold");
+                let fontStyle = res === '勝' ? "color:red; font-weight:bold" : (res === '負' ? "color:blue; font-weight:bold" : (res==='和' ? "color:green; font-weight:bold" : ""));
                 html += `<td>${sysData.players.find(x=>x.number===p.opponents[i])?.isBye?"輪":p.opponents[i]}</td><td style="${bgStyle}">${color}</td><td style="${fontStyle}">${res}</td>`;
             } else { html += `<td></td><td></td><td></td>`; }
         }
@@ -1545,7 +1883,7 @@ function openStatusModal(){
 }
 function toggleStatus(n){ let p=sysData.players.find(x=>x.number===n); if(p){p.isWithdrawn=!p.isWithdrawn;saveCurrentGroupData();openStatusModal();} }
 function batchWithdraw(){ let v=parseFloat(document.getElementById('batchScoreInput').value); if(isNaN(v))return; let c=0; sysData.players.forEach(p=>{if(!p.isBye&&!p.isWithdrawn&&p.points<v){p.isWithdrawn=true;c++;}}); if(c>0){saveCurrentGroupData();openStatusModal();alert(`已退賽 ${c} 人`);} }
-function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i]; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':'#10b981'); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
+function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i] || '-'; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':(res==='和'?'#10b981':'#999')); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
 
 async function generateNextRoundWithEffect() {
     if(viewingRound !== sysData.currentRound && sysData.currentRound > 0) return alert("請先切換至最新一輪");
