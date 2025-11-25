@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>瑞士制積分編排系統 V17.63 (Search Fixed)</title>
+<title>瑞士制積分編排系統 V17.64 (Fixed)</title>
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,7 +68,7 @@ body {
     background-size: 20px 20px;
 }
 
-/* --- Search Highlight Animations (Restored) --- */
+/* --- Search Highlight Animations --- */
 @keyframes highlightPulse {
     0% { background-color: rgba(250, 204, 21, 0.3); transform: scale(1); }
     50% { background-color: rgba(250, 204, 21, 0.7); transform: scale(1.03); box-shadow: 0 0 20px rgba(250, 204, 21, 0.6); }
@@ -352,7 +352,7 @@ button:active { transform: translateY(0); box-shadow: var(--shadow-sm); filter: 
 .cc-label { font-size: 0.8rem; color: var(--text-sub); font-weight: 700; display: flex; flex-direction: column; }
 .cc-input { width: 60px; text-align: right; font-size: 1.5rem; font-weight: 800; border: none; background: transparent; color: var(--text-main); font-family: var(--font-mono); }
 
-/* [科技感過場動畫] */
+/* [科技感過場動畫 - 修復版] */
 #loadingOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(15, 23, 42, 0.95);
@@ -684,7 +684,7 @@ div:where(.swal2-container) .swal2-html-container { font-family: var(--font-main
 </div>
 
 <script>
-/* --- V17.63 System Logic (Search Fixed) --- */
+/* --- V17.64 System Logic (Fixed) --- */
 const STORE_PREFIX = 'swiss_v17_';
 const MASTER_INDEX_KEY = 'swiss_v17_master_index';
 
@@ -1152,7 +1152,7 @@ function importJSON(input) {
     input.value = ''; 
 }
 
-/* --- Pairing Logic (Strictly Preserved) --- */
+/* --- Pairing Logic --- */
 function generateNextRound() {
     if (viewingRound !== sysData.currentRound && sysData.currentRound > 0) return Swal.fire('請先切換至最新一輪');
     if (sysData.currentRound > 0) {
@@ -1663,68 +1663,94 @@ function printPairingCards(){
 
 async function handleImageShare(htmlContent, filename) {
     const container = document.getElementById('printSection');
-    
-    // 1. 先清空，防止舊樣式干擾
     container.innerHTML = '';
-    
-    // 2. 注入內容
     container.innerHTML = htmlContent; 
     container.className = 'export-canvas-container'; 
     container.style.display = 'block'; 
     container.style.backgroundColor = '#ffffff';
 
-    // 3. 針對截圖的特殊樣式修正 (防止截圖被切掉)
     const styleFix = document.createElement('style');
-    styleFix.innerHTML = `
-        .print-container { height: auto !important; overflow: visible !important; }
-        body { overflow: visible !important; height: auto !important; width: auto !important; }
-        /* 截圖時強制背景白 */
-        table, th, td { background-color: white; }
-    `;
+    styleFix.innerHTML = `.print-container { height: auto !important; overflow: visible !important; } body { overflow: visible !important; height: auto !important; width: auto !important; } table, th, td { background-color: white; }`;
     container.appendChild(styleFix);
 
     await new Promise(r => setTimeout(r, 500)); 
-    
     try {
-        const canvas = await html2canvas(container, { 
-            scale: 2, 
-            useCORS: true, 
-            backgroundColor: '#ffffff',
-            logging: false,
-            height: container.scrollHeight, 
-            windowHeight: container.scrollHeight
-        });
-        
+        const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, height: container.scrollHeight, windowHeight: container.scrollHeight });
         canvas.toBlob(async (blob) => {
-            if (navigator.share && navigator.canShare) { 
-                try { 
-                    const file = new File([blob], filename + ".jpg", { type: "image/jpeg" }); 
-                    if (navigator.canShare({ files: [file] })) { 
-                        await navigator.share({ files: [file] }); 
-                    } 
-                } catch (err) {} 
-            }
-            const link = document.createElement('a'); 
-            link.download = filename + '.jpg'; 
-            link.href = canvas.toDataURL('image/jpeg', 0.9); 
-            link.click();
+            if (navigator.share && navigator.canShare) { try { const file = new File([blob], filename + ".jpg", { type: "image/jpeg" }); if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); } } catch (err) {} }
+            const link = document.createElement('a'); link.download = filename + '.jpg'; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
         }, 'image/jpeg', 0.9);
-
-    } catch (err) { 
-        console.error(err);
-        alert("圖片產生失敗"); 
-    } finally {
-        // 4. 【關鍵】截圖完成後，徹底隱藏並清空 HTML
-        // 這樣裡面的 <style>@page landscape</style> 就會消失
-        // 下次按列印按鈕時，瀏覽器就不會誤判為橫向
-        container.style.display = 'none'; 
-        container.innerHTML = ''; 
-    }
+    } catch (err) { console.error(err); Swal.fire('錯誤', '圖片產生失敗', 'error'); } finally { container.style.display = 'none'; container.innerHTML = ''; }
 }
 function shareImage(mode) { if(viewingRound===0)return Swal.fire('未選擇輪次'); handleImageShare(getPairingListHTML(mode), `${sysData.info.eventName}_R${viewingRound}_${mode==='pre'?'對陣':'成績'}`); }
 function shareRankingsImg() { handleImageShare(getRankingsHTML(), `${sysData.info.eventName}_名次表`); }
 function shareSummaryImg() { const container = document.getElementById('printSection'); container.style.width = "1400px"; handleImageShare(getSummaryHTML(), `${sysData.info.eventName}_成績總表`); }
 
+function openStatusModal(){ 
+    let l=document.getElementById('statusList'); l.innerHTML=''; 
+    updateScores();
+    let sortedList = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> { if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints; return b.sSOS - a.sSOS; });
+    sortedList.forEach((p, index)=>{ 
+        let d=document.createElement('div'); 
+        d.style.cssText="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:white;"; 
+        d.innerHTML=`<span>第 ${index+1} 名 <span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#e0f2fe;text-align:center;line-height:24px;font-size:0.8rem;margin:0 5px">${p.number}</span> ${p.name} <small>(${p.points}分)</small></span> <button class="${p.isWithdrawn?'btn-green':'btn-red'}" onclick="toggleStatus(${p.number})" style="padding:4px 10px;font-size:0.8rem">${p.isWithdrawn?'復歸':'退賽'}</button>`; 
+        l.appendChild(d); 
+    }); 
+    document.getElementById('statusModal').style.display='block'; 
+}
+function toggleStatus(n){ let p=sysData.players.find(x=>x.number===n); if(p){p.isWithdrawn=!p.isWithdrawn;saveCurrentGroupData();openStatusModal();} }
+function batchWithdraw(){ let v=parseFloat(document.getElementById('batchScoreInput').value); if(isNaN(v))return; let c=0; sysData.players.forEach(p=>{if(!p.isBye&&!p.isWithdrawn&&p.points<v){p.isWithdrawn=true;c++;}}); if(c>0){saveCurrentGroupData();openStatusModal();Swal.fire('批次操作完成', `已退賽 ${c} 人`, 'success');} }
+function renderSummaryTable() { updateScores(); let t=document.getElementById('summaryTable'); let trs=sysData.currentRound||1; let h=`<thead><tr><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th>`; for(let i=1;i<=trs;i++)h+=`<th>R${i}</th>`; h+='</tr></thead><tbody>'; sysData.players.filter(p=>!p.isBye).forEach(p=>{ h+=`<tr><td>${p.number}</td><td>${p.name}</td><td style="font-weight:bold;color:#ef4444">${p.points}</td><td>${p.opponentPoints}</td>`; for(let i=0;i<trs;i++){ if(i<p.opponents.length){ let res=p.results[i] || '-'; let color=res==='勝'?'#ef4444':(res==='負'?'#3b82f6':(res==='和'?'#10b981':'#999')); h+=`<td>${p.colors[i]=="先"?"🔴":"⚫"}<span style="color:${color};font-weight:bold">${res}</span></td>`; }else h+='<td></td>'; } h+='</tr>'; }); t.innerHTML=h+'</tbody>'; }
+
+async function generateNextRoundWithEffect() {
+    if(viewingRound !== sysData.currentRound && sysData.currentRound > 0) return Swal.fire('請先切換至最新一輪');
+    if(sysData.currentRound > 0){ const unfinished = sysData.pairings.filter(p => p.round <= sysData.currentRound && p.result === null); if(unfinished.length > 0) return Swal.fire(`第 ${unfinished[0].round} 輪還有成績未填寫！`); }
+    const overlay = document.getElementById('loadingOverlay'); const mainTxt = document.getElementById('loadingMainText'); const subTxt = document.getElementById('loadingSubText'); const loadingMsgs = ["正在計算積分權重...", "分析對手強弱係數...", "檢查同隊迴避規則...", "正在優化先後手平衡...", "生成對戰組合...", "校驗歷史對戰紀錄..."];
+    overlay.style.display = 'flex'; let step = 0; const interval = setInterval(() => { mainTxt.innerText = `PAIRING ROUND ${sysData.currentRound + 1}`; subTxt.innerText = loadingMsgs[Math.floor(Math.random() * loadingMsgs.length)]; step++; }, 250);
+    await new Promise(r => setTimeout(r, 2000)); clearInterval(interval); generateNextRound(); overlay.style.display = 'none';
+}
+
+/* --- Seed Draw --- */
+function runSeedDraw() {
+    const input = document.getElementById('playerInput'); const txt = input.value.trim(); if (!txt) return Swal.fire('請先輸入選手名單');
+    let rawNames = txt.split('\n').map(n => n.replace(/^\d+[\.\s、]*/, '').trim()).filter(n => n); if (rawNames.length < 2) return Swal.fire('選手人數不足');
+    let players = rawNames.map((name, i) => ({ name: name, originalIndex: i, type: getPlayerType(name), level: getPlayerLevel(name) }));
+    let result = performSeedDraw(players); let adjustResult = adjustTopPlayerOddEven(result.arrangement); let finalArrangement = adjustResult.arrangement;
+    let newText = finalArrangement.map((p, i) => `${i + 1} ${p.name}`).join('\n'); input.value = newText;
+    showSeedReportModal(finalArrangement, result.score, adjustResult);
+}
+function showSeedReportModal(arrangement, score, adjustResult) {
+    let html = ''; let danPlayers = arrangement.filter(p => p.type === 'dan'); let sPlayers = arrangement.filter(p => p.type === 'letter' && p.level === 'S');
+    html += `<div style="background:#fff7ed; padding:10px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;"><strong>📊 抽籤摘要</strong><br>總人數：${arrangement.length} 人<br>`;
+    if (danPlayers.length > 0) { let maxDan = Math.max(...danPlayers.map(p => p.level)); let topCount = danPlayers.filter(p => p.level === maxDan).length; html += `最高段位：${maxDan}段 (${topCount}人) - 已分散<br>`; }
+    if (sPlayers.length > 0) { html += `S級選手：${sPlayers.length}人 - 已分散<br>`; }
+    html += `違規分數：${score} ${score === 0 ? '🎉 (完美)' : ''}</div>`;
+    if (adjustResult.adjusted) { html += `<div style="margin-bottom:15px; font-size:0.9rem; color:#d97706;"><strong>⚖️ 奇偶平衡調整</strong><br>${adjustResult.message.replace(/\n/g, '<br>')}</div>`; }
+    html += `<strong>📋 前 10 名預覽 & 檢測：</strong><ul style="padding-left:20px; margin-top:5px;">`;
+    for(let i=0; i<Math.min(arrangement.length, 10); i+=2) {
+        if(i+1 >= arrangement.length) { html += `<li>第 ${i+1} 桌：${arrangement[i].name} (輪空)</li>`; break; }
+        let p1 = arrangement[i], p2 = arrangement[i+1]; let warning = ""; let penalty = 0;
+        if (p1.type === 'letter' && p2.type === 'letter') penalty = calculateLetterPenalty(p1.level, p2.level); else if (p1.type === 'dan' && p2.type === 'dan') penalty = calculateDanPenalty(p1.level, p2.level);
+        if(penalty > 0) warning = `<span style="color:red; font-weight:bold; margin-left:5px;">⚠️ 碰撞</span>`;
+        html += `<li>第 ${i/2+1} 桌：${p1.name} vs ${p2.name} ${warning}</li>`;
+    }
+    html += `<li>... (共 ${Math.ceil(arrangement.length/2)} 桌)</li></ul><p style="font-size:0.85rem; color:#666; margin-top:10px;">* 名單已自動更新至輸入框，請點擊「初始化首輪配對」開始比賽。</p>`;
+    document.getElementById('seedReportContent').innerHTML = html; document.getElementById('seedReportModal').style.display = 'flex';
+}
+function adjustTopPlayerOddEven(arrangement) {
+    let topPlayers = []; let hasS = arrangement.some(p => p.type === 'letter' && p.level === 'S'); let hasDan = arrangement.some(p => p.type === 'dan');
+    if (hasS) { arrangement.forEach((p, i) => { if(p.type==='letter' && p.level==='S') topPlayers.push({idx:i, isOdd:(i+1)%2!==0, name:p.name}); }); }
+    else if (hasDan) { let maxDan = Math.max(...arrangement.filter(p=>p.type==='dan').map(p=>p.level)); arrangement.forEach((p, i) => { if(p.type==='dan' && p.level===maxDan) topPlayers.push({idx:i, isOdd:(i+1)%2!==0, name:p.name}); }); }
+    if (topPlayers.length === 0) return { arrangement: arrangement, adjusted: false, message: '' };
+    let oddCount = topPlayers.filter(p => p.isOdd).length; let evenCount = topPlayers.length - oddCount;
+    if (Math.abs(oddCount - evenCount) <= 1) return { arrangement: arrangement, adjusted: false, message: '' };
+    let newArr = [...arrangement]; let log = []; let diff = Math.floor(Math.abs(oddCount - evenCount) / 2); let toEven = oddCount > evenCount; let targetPlayers = topPlayers.filter(p => p.isOdd === toEven);
+    for (let i = 0; i < diff && i < targetPlayers.length; i++) {
+        let tIdx = targetPlayers[i].idx; let swapIdx = (tIdx + 1 < newArr.length) ? tIdx + 1 : tIdx - 1;
+        if (swapIdx >= 0 && swapIdx < newArr.length) { [newArr[tIdx], newArr[swapIdx]] = [newArr[swapIdx], newArr[tIdx]]; log.push(`位置 ${tIdx+1} (${newArr[swapIdx].name}) 與 ${swapIdx+1} 交換`); }
+    }
+    return { arrangement: newArr, adjusted: true, message: `修正奇偶分佈：原奇${oddCount}/偶${evenCount}。\n` + log.join('\n') };
+}
 function getPlayerType(name) { if (/[SABCT]$/i.test(name)) return 'letter'; if (/(\d+|[一二三四五六七八九十]+)段$/.test(name)) return 'dan'; return 'none'; }
 function getPlayerLevel(name) { let type = getPlayerType(name); if (type === 'letter') return name.trim().slice(-1).toUpperCase(); if (type === 'dan') { let m = name.match(/(\d+)段$/); if (m) return parseInt(m[1]); let cm = name.match(/([一二三四五六七八九十]+)段$/); if (cm) return chineseNumberToArabic(cm[1]); } return 0; }
 function chineseNumberToArabic(chinese) { const map = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10}; if (chinese.length === 1) return map[chinese] || 0; if (chinese.startsWith('十')) return 10 + (map[chinese[1]] || 0); return 0; }
