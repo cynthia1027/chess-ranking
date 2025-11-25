@@ -1843,7 +1843,41 @@ async function handleImageShare(htmlContent, filename) {
 function shareImage(mode) { if(viewingRound===0)return Swal.fire('未選擇輪次'); handleImageShare(getPairingListHTML(mode), `${sysData.info.eventName}_R${viewingRound}_${mode==='pre'?'對陣':'成績'}`); }
 function shareRankingsImg() { handleImageShare(getRankingsHTML(), `${sysData.info.eventName}_名次表`); }
 function shareSummaryImg() { const container = document.getElementById('printSection'); container.style.width = "1400px"; handleImageShare(getSummaryHTML(), `${sysData.info.eventName}_成績總表`); }
+function exportToExcel(){
+    updateRankings(); updateScores();
+    const grp = sysData.info.groupName ? (" " + sysData.info.groupName) : "";
+    const fullTitle = sysData.info.eventName + grp;
 
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>`;
+    html += `<h3>${fullTitle} 名次表</h3>`;
+    html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th>名次</th><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>對戰</th><th>勝局</th><th>後手勝</th><th>後手數</th><th>強對手</th><th>備註</th></tr></thead><tbody>`;
+    let s = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> { if(b.points !== a.points) return b.points - a.points; if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints; let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h; if(b.wins !== a.wins) return b.wins - a.wins; return b.sSOS - a.sSOS; });
+    s.forEach((p,i)=>{ html += `<tr><td>${i+1}</td><td>${p.number}</td><td style="font-weight:bold; font-size:14px">${p.name}</td><td style="color:red; font-weight:bold; font-size:14px">${p.points}</td><td>${p.opponentPoints}</td><td>'${p.h2hDisplay || ""}</td><td>${p.wins}</td><td>${p.bWins}</td><td>${p.bCnt}</td><td>${p.sSOS}</td><td>${p.rankNote||""}</td></tr>`; });
+    html += `</tbody></table><br>`;
+    let trs = sysData.currentRound || 1;
+    html += `<h3>${fullTitle} 成績總表</h3>`;
+    html += `<table border="1" style="border-collapse:collapse; text-align:center; font-family:'Noto Sans TC', sans-serif;"><thead><tr style="background-color:#2563eb; color:white;"><th colspan="5">基本資料</th>`;
+    for(let i=1; i<=trs; i++) html += `<th colspan="3">第 ${i} 輪</th>`;
+    html += `</tr><tr style="background-color:#2563eb; color:white;"><th>編號</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>`;
+    for(let i=1; i<=trs; i++) html += `<th>對手</th><th>先後</th><th>結果</th>`;
+    html += `</tr></thead><tbody>`;
+    sysData.players.filter(p=>!p.isBye).forEach(p => {
+        let wCnt = p.colors.filter(c=>c==='先').length;
+        html += `<tr><td>${p.number}</td><td style="font-weight:bold; font-size:14px">${p.name}</td><td style="color:red; font-weight:bold; font-size:14px">${p.points}</td><td>${p.opponentPoints}</td><td>${wCnt}</td>`;
+        for(let i=0; i<trs; i++){
+            if(i < p.opponents.length){
+                let res = p.results[i] || '進行中'; 
+                let color = p.colors[i];
+                let bgStyle = color === '先' ? 'background-color:#ffecd9' : 'background-color:#dbeafe';
+                let fontStyle = res === '勝' ? "color:red; font-weight:bold" : (res === '負' ? "color:blue; font-weight:bold" : (res==='和' ? "color:green; font-weight:bold" : ""));
+                html += `<td>${sysData.players.find(x=>x.number===p.opponents[i])?.isBye?"輪":p.opponents[i]}</td><td style="${bgStyle}">${color}</td><td style="${fontStyle}">${res}</td>`;
+            } else { html += `<td></td><td></td><td></td>`; }
+        }
+        html += `</tr>`;
+    });
+    html += `</tbody></table></body></html>`;
+    const b = new Blob([html], {type:'application/vnd.ms-excel'}); const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `${sysData.info.eventName}_報表.xls`; document.body.appendChild(l); l.click(); l.remove();
+}
 function openStatusModal(){ 
     let l=document.getElementById('statusList'); l.innerHTML=''; 
     updateScores();
