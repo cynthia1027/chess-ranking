@@ -389,6 +389,61 @@ button:active { transform: translateY(0); box-shadow: var(--shadow-sm); filter: 
 /* SweetAlert Customization */
 div:where(.swal2-container) h2:where(.swal2-title) { font-family: var(--font-main) !important; font-size: 1.5rem !important; }
 div:where(.swal2-container) .swal2-html-container { font-family: var(--font-main) !important; }
+
+/* === B+D 成績回饋動畫 === */
+
+/* B: 左側結果色條 */
+.match-card-ui.has-result {
+    position: relative;
+    border-left: 4px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.match-card-ui.result-red { border-left-color: #ef4444; }
+.match-card-ui.result-black { border-left-color: #3b82f6; }
+.match-card-ui.result-draw { border-left-color: #10b981; }
+.match-card-ui.result-bye { border-left-color: #9ca3af; }
+
+/* 剛確認時的閃爍效果 */
+.match-card-ui.just-confirmed {
+    animation: confirmPulse 0.4s ease-out;
+}
+
+@keyframes confirmPulse {
+    0% { box-shadow: var(--shadow-sm); }
+    50% { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1), var(--shadow-md); }
+    100% { box-shadow: var(--shadow-sm); }
+}
+
+/* D: 勝負方強調 */
+.player-box {
+    transition: opacity 0.25s, transform 0.25s;
+}
+
+.player-box.winner {
+    transform: scale(1.02);
+}
+
+.player-box.winner .player-name {
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.player-box.loser {
+    opacity: 0.5;
+    transform: scale(0.98);
+}
+
+/* 結果標籤淡入 */
+.result-tag {
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
 </style>
 </head>
 <body class="theme-blue">
@@ -1100,9 +1155,99 @@ function changeViewRound(delta) {
     if(isManualMode) toggleManualMode();
     renderPairingList(true); updateButtonsState();
 }
-function setRes(wId, r){ 
-    let p = sysData.pairings.find(x => x.round===viewingRound && x.white.number===wId); 
-    if(p){ p.result = r; updateScores(); saveCurrentGroupData(); renderPairingList(false, wId); } 
+function setRes(wId, r) {
+    let p = sysData.pairings.find(x => x.round === viewingRound && x.white.number === wId);
+    if (!p) return;
+    
+    p.result = r;
+    updateScores();
+    saveCurrentGroupData();
+    
+    // 找到對應卡片（用 data 屬性會更好，但這裡用現有結構）
+    const cards = document.querySelectorAll('.match-card-ui');
+    let targetCard = null;
+    
+    cards.forEach((card, idx) => {
+        const pairs = sysData.pairings.filter(x => x.round === viewingRound);
+        pairs.sort((a, b) => { if (a.black.isBye) return 1; if (b.black.isBye) return -1; return 0; });
+        if (pairs[idx] && pairs[idx].white.number === wId) {
+            targetCard = card;
+        }
+    });
+    
+    if (targetCard) {
+        applyResultFeedback(targetCard, r, p.black.isBye);
+    } else {
+        renderPairingList(false, wId);
+    }
+}
+
+function applyResultFeedback(card, result, isBye) {
+    const vsArea = card.querySelector('.vs-area');
+    const playerBoxes = card.querySelectorAll('.player-box');
+    const whiteBox = playerBoxes[0];
+    const blackBox = playerBoxes[1];
+    const whiteNum = parseInt(whiteBox.querySelector('.player-num-badge')?.textContent.replace('#', ''));
+    
+    // 清除舊的狀態
+    card.classList.remove('has-result', 'result-red', 'result-black', 'result-draw', 'result-bye', 'just-confirmed');
+    whiteBox?.classList.remove('winner', 'loser');
+    blackBox?.classList.remove('winner', 'loser');
+    
+    // 如果是重填（result = null）
+    if (result === null) {
+        if (!isBye && !isManualMode) {
+            vsArea.innerHTML = `
+                <div class="btn-res-group">
+                    <button class="btn-res btn-res-red" onclick="setRes(${whiteNum},1)">紅</button>
+                    <button class="btn-res btn-res-draw" onclick="setRes(${whiteNum},0.5)">和</button>
+                    <button class="btn-res btn-res-black" onclick="setRes(${whiteNum},0)">黑</button>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    // 判斷結果類型
+    let resText = '', tagClass = '', resultClass = '';
+    
+    if (isBye) {
+        resText = '輪空勝';
+        tagClass = 'tag-draw';
+        resultClass = 'result-bye';
+    } else if (result === 1) {
+        resText = '紅勝';
+        tagClass = 'tag-win';
+        resultClass = 'result-red';
+        whiteBox?.classList.add('winner');
+        blackBox?.classList.add('loser');
+    } else if (result === 0.5) {
+        resText = '和局';
+        tagClass = 'tag-draw';
+        resultClass = 'result-draw';
+    } else {
+        resText = '黑勝';
+        tagClass = 'tag-loss';
+        resultClass = 'result-black';
+        whiteBox?.classList.add('loser');
+        blackBox?.classList.add('winner');
+    }
+    
+    // 更新卡片樣式
+    card.classList.add('has-result', resultClass, 'just-confirmed');
+    
+    // 更新結果顯示
+    vsArea.innerHTML = `
+        <span class="result-tag ${tagClass}">${resText}</span>
+        ${!isManualMode ? `<small style="color:#999;cursor:pointer;text-decoration:underline;margin-top:5px" onclick="setRes(${whiteNum},null)">重填</small>` : ''}
+    `;
+    
+    // 移除暫時效果
+    setTimeout(() => {
+        card.classList.remove('just-confirmed');
+        whiteBox?.classList.remove('winner', 'loser');
+        blackBox?.classList.remove('winner', 'loser');
+    }, 800);
 }
 
 /* --- Import/Export Logic --- */
@@ -1397,6 +1542,19 @@ function renderPairingList(animate = false, highlightNumber = null){
 
         const card = document.createElement('div'); 
         card.className = 'match-card-ui';
+        // 加上結果色條
+        if (p.result !== null) {
+            card.classList.add('has-result');
+            if (p.black.isBye) {
+                card.classList.add('result-bye');
+            } else if (p.result === 1) {
+                card.classList.add('result-red');
+            } else if (p.result === 0.5) {
+                card.classList.add('result-draw');
+            } else {
+                card.classList.add('result-black');
+            }
+        }
         if(isRematch) card.style.border = "2px solid #ef4444";
         
         if (animate) { card.style.animation = `fadeIn 0.5s ease-out forwards`; card.style.opacity = 0; card.style.animationDelay = `${idx * 0.05}s`; }
