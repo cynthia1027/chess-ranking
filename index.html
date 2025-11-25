@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>瑞士制積分編排系統 V17.6 (介面優化版)</title>
+<title>瑞士制積分編排系統 V17.61 (列印修正版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
@@ -1350,14 +1350,14 @@ function getThemeColorObj() { const tName = sysData.settings.themeColor || 'blue
 function getPortraitPrintStyle(theme) {
     return `<style>
         @page { size: portrait; margin: 5mm; } body { margin: 0; padding: 0; }
-        .print-report-table { width: 95%; margin: 10px auto; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; border: 2px solid #333; }
+        .print-report-table { width: 99%; margin: 10px auto; border-collapse: collapse; font-family: "Noto Sans TC", sans-serif; border: 2px solid #333; }
         .print-report-table th { background-color: ${theme.head} !important; color: white !important; padding: 2px 2px; text-align: center; vertical-align: middle !important; font-size: 11pt; font-weight: 900; border: 1px solid #999; height: 26px; -webkit-print-color-adjust: exact; }
         .print-report-table td { padding: 4px 2px; text-align: center; vertical-align: middle !important; font-size: 14pt; color: #000; border: 1px solid #ccc; font-weight: 900; height: 30px; line-height: 1.1; white-space: nowrap; }
         .print-report-table tr:nth-child(odd) td { background-color: #ffffff; }
         .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; }
-        .print-header { text-align: center; padding: 5px 0 5px 0; border-bottom: 2px solid #ddd; margin: 0 auto 5px auto; width: 95%; }
+        .print-header { text-align: center; padding: 5px 0 5px 0; border-bottom: 2px solid #ddd; margin: 0 auto 5px auto; width: 98%; }
         .print-header h1 { font-size: 20pt; color: #111; margin: 0; line-height: 1.1; }
-        .print-footer { display: flex; justify-content: space-between; margin-top: 5px; width: 95%; margin: 5px auto; font-size: 12pt; font-weight: bold; padding: 5px 10px; border-top: 1px solid #ccc; }
+        .print-footer { display: flex; justify-content: space-between; margin-top: 5px; width: 98%; margin: 5px auto; font-size: 14pt; font-weight: bold; padding: 5px 10px; border-top: 1px solid #ccc; }
         .win-res { color: #dc2626 !important; font-weight: 900 !important; } .loss-res { color: #2563eb !important; font-weight: 900 !important; } .draw-res { color: #16a34a !important; font-weight: 900 !important; } .bye-res { color: #d63384 !important; font-weight: 900 !important; }
         .vs-col { color: #94a3b8 !important; font-weight: bold; font-style: italic; }
         .print-name-cell { font-size: 14pt !important; font-weight: 900 !important; }
@@ -1367,7 +1367,7 @@ function getPortraitPrintStyle(theme) {
     </style>`;
 }
 
-// UPDATE: Pairing List HTML - Optimized for Big Text & Clarity
+// UPDATE: Pairing List HTML - Fixed for clipping and optimized sizing
 function getPairingListHTML(mode) {
     const pairs = sysData.pairings.filter(p => p.round === viewingRound);
     pairs.sort((a, b) => {
@@ -1388,11 +1388,12 @@ function getPairingListHTML(mode) {
     if (calculatedRowHeight > 40) calculatedRowHeight = 40; 
     if (calculatedRowHeight < 10) calculatedRowHeight = 10;
 
-    // 字體大小
+    // 字體大小，增加天花板限制 (Fix: 避免字體無限放大)
     let dynamicFontSize = Math.floor(calculatedRowHeight * 2.3); 
-    if (dynamicFontSize > 50) dynamicFontSize = 50; 
+    if (dynamicFontSize > 28) dynamicFontSize = 28; // New Limit for legibility vs overflow
     if (dynamicFontSize < 14) dynamicFontSize = 14;
 
+    // Fix: 修改 print-table 寬度為 99% 避免被印表機邊界裁切
     const css = `<style>
         @page { size: portrait; margin: 5mm; }
         body { margin: 0; padding: 0; font-family: "Noto Sans TC", sans-serif; background: white;}
@@ -1401,14 +1402,14 @@ function getPairingListHTML(mode) {
         .print-header { text-align: center; height: 45px; line-height: 45px; border-bottom: 4px solid #000; margin-bottom: 2px; flex-shrink: 0; }
         .print-header h1 { font-size: 28pt; color: #000; margin: 0; font-weight: 900; letter-spacing: 2px; line-height: 1; }
 
-        .print-table { width: 100%; border-collapse: collapse; border: 3px solid #000; table-layout: fixed; }
+        /* Update: Margin Auto and 99% width to fix cut-off border */
+        .print-table { width: 99%; margin: 0 auto; border-collapse: collapse; border: 3px solid #000; table-layout: fixed; }
         
-        /* 修改點：標題字體加大 */
         .print-table th { 
             background-color: ${theme.head} !important; 
             color: white !important; 
-            height: 40px; /* 增加高度 */
-            font-size: 20pt; /* 字體顯著加大 */
+            height: 40px;
+            font-size: 20pt;
             font-weight: 900; 
             border: 2px solid #000; 
             -webkit-print-color-adjust: exact; 
@@ -1429,22 +1430,12 @@ function getPairingListHTML(mode) {
         }
         .print-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; }
 
-        /* 修改點：桌號方塊優化，避免兩位數被切掉 */
         .table-badge {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #000;
-            color: #fff !important;
-            border-radius: 6px;
-            width: 90%;          /* 稍微加寬 */
-            height: 85%;         /* 稍微加高 */
-            margin: 0 auto;
-            font-family: 'Roboto Mono', monospace;
-            -webkit-print-color-adjust: exact;
-            font-size: 0.85em;   /* 字體比例稍微縮小一點點以容納兩位數 */
-            font-weight: 900;
-            line-height: 1;
+            display: flex; justify-content: center; align-items: center;
+            background-color: #000; color: #fff !important;
+            border-radius: 6px; width: 90%; height: 85%; margin: 0 auto;
+            font-family: 'Roboto Mono', monospace; -webkit-print-color-adjust: exact;
+            font-size: 0.85em; font-weight: 900; line-height: 1;
         }
         
         .name-cell { font-weight: 900; letter-spacing: 1px; }
@@ -1487,8 +1478,6 @@ function getPairingListHTML(mode) {
 
         let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, mode === 'pre' ? viewingRound : viewingRound + 1);
         let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, mode === 'pre' ? viewingRound : viewingRound + 1);
-
-        // 修改點：直接顯示數字，移除 # 號 HTML
         let wNumDisplay = p.white.number;
         let bNumDisplay = p.black.isBye ? '' : p.black.number;
 
@@ -1507,10 +1496,8 @@ function getPairingListHTML(mode) {
     h += `</tbody></table></div>`;
     return h;
 }
-// UPDATE: Rankings HTML - Full Name, No Group if empty, Compact Page
-// UPDATE: Rankings HTML - Maximized Font
-// UPDATE: Rankings HTML - Visual Distinction & Optimized Columns
-// UPDATE: Rankings HTML - Clear Rank Numbers (No Dark Background)
+
+// UPDATE: Rankings HTML - Fix cut-off for low density by capping font
 function getRankingsHTML() {
     updateRankings();
     let s = [...sysData.players].filter(p => !p.isBye).sort((a,b)=> {
@@ -1529,14 +1516,16 @@ function getRankingsHTML() {
     if (calculatedRowHeight > 25) calculatedRowHeight = 25;
     if (calculatedRowHeight < 7) calculatedRowHeight = 7;
 
+    // Fix: Capped Font Size for safety in low participant counts
     let dynamicFontSize = Math.floor(calculatedRowHeight * 2.0); 
-    if (dynamicFontSize > 30) dynamicFontSize = 30; 
+    if (dynamicFontSize > 20) dynamicFontSize = 20; // Capped at 20pt
     if (dynamicFontSize < 10) dynamicFontSize = 10;
 
+    // Fix: table width 99% to avoid clip
     let h = `<style>
         @page { size: portrait; margin: 5mm; } 
         body { margin: 0; padding: 0; font-family: "Noto Sans TC", sans-serif; background: white; }
-        .print-container { width: 98%; margin: 0 auto; display: flex; flex-direction: column; }
+        .print-container { width: 99%; margin: 0 auto; display: flex; flex-direction: column; }
         .print-header { text-align: center; height: 40px; line-height: 40px; border-bottom: 3px solid #333; margin-bottom: 5px; flex-shrink: 0; }
         .print-header h1 { font-size: 26pt; color: #111; margin: 0; font-weight: 900; }
 
@@ -1567,9 +1556,8 @@ function getRankingsHTML() {
         
         .rank-top { color: #d97706; font-size: 1.1em; }
         .export-red-text { color: #dc2626 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact; }
-        .name-cell { text-align: left; padding-left: 5px !important; }
+        .name-cell { text-align: left; padding-left: 5px !important; font-weight: normal !important; }
 
-        /* 修改點：改用單純的數字樣式，不用圓底 */
         .rank-medal { font-size: 1.3em; margin-right: 2px; }
         .rank-num { 
             font-size: 1.1em; 
@@ -1577,10 +1565,7 @@ function getRankingsHTML() {
             color: #000; 
             font-family: 'Roboto Mono', monospace;
         }
-        
-        /* 編號樣式：稍微淡一點或細一點，以便與排名區分 */
         .num-plain { color: #444; font-weight: 700; font-size: 0.9em; font-family: 'Roboto Mono', monospace; }
-        
         .h2h-text { font-size: 1.0em; letter-spacing: -1px; } 
     </style>` + `
     <div class="print-container">
@@ -1604,14 +1589,12 @@ function getRankingsHTML() {
             <tbody>`;
             
     s.forEach((p, i) => {
-        // 修改點：前三名獎牌，第四名以後直接顯示數字，不加黑底
         let rankDisplay = "";
         if (i === 0) rankDisplay = "<span class='rank-medal'>🥇</span>";
         else if (i === 1) rankDisplay = "<span class='rank-medal'>🥈</span>";
         else if (i === 2) rankDisplay = "<span class='rank-medal'>🥉</span>";
         else rankDisplay = `<span class="rank-num">${i + 1}</span>`;
 
-        // 處理對戰顯示
         let h2hContent = p.h2hDisplay ? `<span class="h2h-text">${p.h2hDisplay}</span>` : "";
 
         h += `<tr>
@@ -1631,93 +1614,157 @@ function getRankingsHTML() {
     h += `</tbody></table></div>`;
     return h;
 }
-// UPDATE: Summary HTML - Full Name, Columns Swapped, Empty Group Handling
-// UPDATE: Summary HTML - Compact & Large
+
+// UPDATE: Summary HTML - 20/80 極致緊湊版
 function getSummaryHTML() {
     updateScores(); 
 
-    let rankedList = [...sysData.players].filter(p=>!p.isBye).sort((a,b)=> {
-        if(b.points !== a.points) return b.points - a.points; 
-        if(b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
-        let h2h = getH2HWinner(a, b); if(h2h !== 0) return h2h;
-        if(b.wins !== a.wins) return b.wins - a.wins; 
-        if(b.bWins !== a.bWins) return b.bWins - a.bWins; 
-        if(b.bCnt !== a.bCnt) return b.bCnt - a.bCnt;
+    // --- 1. 資料準備 (不變) ---
+    let rankedList = [...sysData.players].filter(p => !p.isBye).sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
+        let h2h = getH2HWinner(a, b);
+        if (h2h !== 0) return h2h;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (b.bWins !== a.bWins) return b.bWins - a.bWins;
+        if (b.bCnt !== a.bCnt) return b.bCnt - a.bCnt;
         return b.sSOS - a.sSOS;
     });
     let rankMap = {};
     rankedList.forEach((p, i) => rankMap[p.number] = i + 1);
-    let displayList = [...sysData.players].filter(p=>!p.isBye).sort((a,b) => a.number - b.number);
+    let displayList = [...sysData.players].filter(p => !p.isBye).sort((a, b) => a.number - b.number);
 
-    let trs = sysData.currentRound || 1; 
+    let trs = sysData.currentRound || 1;
     const theme = getThemeColorObj();
     const grpName = sysData.info.groupName ? (" " + sysData.info.groupName) : "";
     const titleStr = `${sysData.info.eventName}${grpName} 成績總表`;
 
+    // --- 2. 行高計算 (不變) ---
     const playerCount = displayList.length;
-    const totalRows = playerCount + 2; 
+    const totalRows = playerCount + 2.5;
+    const availableHeightMM = 180;
     
-    // 計算行高
-    let calculatedRowHeight = 180 / totalRows; 
-    if (calculatedRowHeight > 12) calculatedRowHeight = 12;
-    if (calculatedRowHeight < 5.0) calculatedRowHeight = 5.0; 
-    
-    // 字體極大化
-    let dynamicFontSize = calculatedRowHeight * 2.2;
-    if (dynamicFontSize > 24) dynamicFontSize = 24; // 提升上限
-    if (dynamicFontSize < 10) dynamicFontSize = 10;
+    let calculatedRowHeight = availableHeightMM / totalRows;
+    if (calculatedRowHeight > 14) calculatedRowHeight = 14; 
+    if (calculatedRowHeight < 5.5) calculatedRowHeight = 5.5;
 
+    let dynamicFontSize = calculatedRowHeight * 2.2;
+    if (dynamicFontSize > 15) dynamicFontSize = 15;
+    if (dynamicFontSize < 9) dynamicFontSize = 9;  
+
+    // --- 3. 寬度分配核心邏輯：21% vs 79% (極限壓縮基本資料) ---
+
+    // A. 設定左側 [基本資料] 總寬 = 21%
+    // 每個欄位都經過精算，縮到最小可視範圍
+    const pNo = "2.3%";    // 編號 (足夠放2位數)
+    const pRank = "2.6%";  // 排名
+    const pName = "7.5%";  // 姓名 (縮減，原本14%，但依然能放長名)
+    const pPts = "3%";   // 積分 (XX分)
+    const pOS = "3.3%";    // 對手分
+    const pFirst = "2.3%"; // 先手 (只有個位數，最窄)
+    // 左側總合: 2.2+2.2+9.6+2.5+2.5+2 = 21.0%
+
+    // B. 設定右側 [賽程] 總寬 = 79%
+    const rightTotal = 79.0;
+    const totalRoundCols = trs * 3; 
+    const perColWidth = (rightTotal / totalRoundCols).toFixed(4) + "%";
+
+    // 每一輪的 column definitions 字串生成
+    let roundColsHtml = "";
+    for(let r=0; r<trs; r++) {
+        roundColsHtml += `<col style="width:${perColWidth}"><col style="width:${perColWidth}"><col style="width:${perColWidth}">`;
+    }
+
+    // --- 4. 生成 HTML ---
     let h = `<style>
     @page { size: landscape; margin: 5mm; } 
     body { 
         font-family: "Noto Sans TC", sans-serif; 
         -webkit-print-color-adjust: exact;
         background: white;
+        margin: 0; padding: 0;
+        width: 100%;
     }
-    @media print { body { width: 285mm !important; max-width: 285mm !important; } }
+    .print-container { width: 100% !important; margin: 0; padding: 0; display: block; }
     
-    .print-container { width: 100%; margin: 0 auto; }
-    .print-header { text-align: center; height: 35px; line-height: 35px; border-bottom: 3px solid #333; margin-bottom: 2px; }
+    .print-header { 
+        width: 100%; text-align: center; height: 35px; line-height: 35px; 
+        border-bottom: 3px solid #333; margin-bottom: 2px; 
+    }
     .print-header h1 { font-size: 24pt; color: #111; margin: 0; font-weight: 900; }
 
-    .print-report-table { width: 100%; border-collapse: collapse; border: 3px solid #333; table-layout: fixed; } 
+    .print-report-table { 
+        width: 100% !important; 
+        border-collapse: collapse; 
+        border: 3px solid #333; 
+        table-layout: fixed; 
+    } 
+    /* 將表頭字體縮小到 11pt 以適應窄欄位 */
     .print-report-table th { 
-        background-color: ${theme.head} !important; color: white !important; text-align: center; font-size: 11pt; font-weight: 900; border: 1px solid #000; height: 20px; overflow: hidden; 
+        background-color: ${theme.head} !important; color: white !important; 
+        text-align: center; font-size: 11pt; font-weight: 900; 
+        border: 1px solid #000; height: 21px; overflow: hidden; 
+        white-space: nowrap; /* 強制不換行 */
     } 
     .print-report-table td { 
-        height: ${calculatedRowHeight}mm; font-size: ${dynamicFontSize}pt; text-align: center; color: #000; border: 1px solid #000; font-weight: 900; white-space: nowrap; padding: 0; overflow: hidden; line-height: 0.95; 
+        height: ${calculatedRowHeight}mm; font-size: ${dynamicFontSize}pt; 
+        text-align: center; color: #000; border: 1px solid #000; 
+        font-weight: 900; white-space: nowrap; padding: 0; overflow: hidden; line-height: 0.95; 
     } 
     .print-report-table tr:nth-child(even) td { background-color: ${theme.row} !important; } 
     
-    .print-name-cell { text-align: left !important; padding-left: 2px !important; }
+    /* 姓名欄中對齊 */
+    .print-name-cell { text-align: center !important; padding-left: 0; font-weight:500!important; }
+    
     .rank-score { color: #dc2626 !important; font-weight: 900 !important; }
     .rank-badge { background: #000; color: #fff; border-radius: 4px; padding: 0 4px; display: inline-block; line-height: 1.2; font-size: 0.9em; }
     
     .footer-table { width: 100%; border: none; margin-top: 5px; }
-    .footer-table td { border: none; text-align: left; font-size: 12pt; font-weight: bold; padding: 0 10px; height: auto; background: transparent !important; }
+    .footer-table td { border: none; text-align: left; font-size: 14pt; font-weight: bold; padding: 0 10px; height: auto; background: transparent !important; }
     </style>` + `
     <div class="print-container">
         <div class="print-header"><h1>${titleStr}</h1></div>
         <table class="print-report-table">
+            <colgroup>
+                <!-- 左側：極限壓縮 (21%) -->
+                <col style="width:${pNo}">
+                <col style="width:${pRank}">
+                <col style="width:${pName}">
+                <col style="width:${pPts}">
+                <col style="width:${pOS}">
+                <col style="width:${pFirst}">
+                <!-- 右側：超級寬敞 (79%) -->
+                ${roundColsHtml}
+            </colgroup>
             <thead>
                 <tr><th colspan="6">基本資料</th>${Array.from({length:trs},(_,i)=>`<th colspan="3">第 ${i+1} 輪</th>`).join('')}</tr>
-                <tr><th width="5%">編號</th><th width="5%">排名</th><th width="12%">姓名</th><th width="6%">積分</th><th width="6%">對手分</th><th width="4%">先手</th>${Array.from({length:trs},()=>`<th width="5%">對手</th><th width="4%">先後</th><th width="5%">結果</th>`).join('')}</tr>
+                <tr>
+                    <th>編號</th><th>排名</th><th>姓名</th><th>積分</th><th>對手分</th><th>先手</th>
+                    ${Array.from({length:trs},()=>`<th>對手</th><th>先後</th><th>結果</th>`).join('')}
+                </tr>
             </thead>
             <tbody>`;
     
-    displayList.forEach(p=>{
-        let wCnt = p.colors.filter(c=>c==='先').length;
+    displayList.forEach(p => {
+        let wCnt = p.colors.filter(c => c === '先').length;
         let rank = rankMap[p.number] || '-';
         h += `<tr>
-            <td>${p.number}</td><td><span class="rank-badge">${rank}</span></td><td class="print-name-cell">${p.name}</td>
-            <td class="rank-score">${p.points}</td><td>${p.opponentPoints}</td><td>${wCnt}</td>`;
+            <td>${p.number}</td>
+            <td><span class="rank-badge">${rank}</span></td>
+            <td class="print-name-cell">${p.name}</td>
+            <td class="rank-score">${p.points}</td>
+            <td>${p.opponentPoints}</td>
+            <td>${wCnt}</td>`;
+        
         for(let i=0; i<trs; i++){
-            if(i<p.opponents.length){
+            if(i < p.opponents.length){
                 let res = p.results[i];
-                let colorStyle = p.colors[i]==='先' ? "background-color: #ffecd9 !important; -webkit-print-color-adjust: exact;" : "background-color: #dbeafe !important; -webkit-print-color-adjust: exact;";
-                let resStyle = res==='勝'?'color:#dc2626 !important;font-weight:900':(res==='負'?'color:#2563eb !important;font-weight:900':'color:#16a34a !important;font-weight:900');
+                let colorStyle = p.colors[i] === '先' ? "background-color: #ffecd9 !important; -webkit-print-color-adjust: exact;" : "background-color: #dbeafe !important; -webkit-print-color-adjust: exact;";
+                let resStyle = res === '勝' ? 'color:#dc2626 !important;font-weight:900' : (res === '負' ? 'color:#2563eb !important;font-weight:900' : (res === '和' ? 'color:#16a34a !important;font-weight:900' : '#999'));
                 h += `<td>${p.opponents[i]}</td><td style="${colorStyle}">${p.colors[i]}</td><td style="${resStyle}">${res}</td>`;
-            } else h += '<td></td><td></td><td></td>';
+            } else {
+                h += '<td></td><td></td><td></td>';
+            }
         }
         h += `</tr>`;
     });
@@ -1731,6 +1778,7 @@ function getSummaryHTML() {
         </tr>
     </table>
     </div>`;
+    
     return h;
 }
 function printPairingList(mode) { document.getElementById('printSection').innerHTML = getPairingListHTML(mode); window.print(); }
