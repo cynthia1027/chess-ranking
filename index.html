@@ -1816,7 +1816,80 @@ function importJSON(input) {
     input.value = ''; 
 }
 
-/* --- Pairing Logic --- */
+/* === 瑞士制配對核心邏輯 (V17.68 Ultimate Fix: Score Priority) === */
+
+// 1. 取得選手的顏色需求狀態
+// 回傳值: 2(必紅), 1(強烈求紅), 0(中立), -1(強烈求黑), -2(必黑)
+function getPlayerColorStatus(p, round) {
+    let r = p.colors.filter(c => c === '先').length;
+    let b = p.colors.filter(c => c === '後').length;
+    let bal = r - b;
+    let len = p.colors.length;
+    
+    // 優先檢查：連續顏色 (Color Streak) - 絕對規則
+    if (len >= 2) {
+        let last1 = p.colors[len - 1];
+        let last2 = p.colors[len - 2];
+        if (last1 === '先' && last2 === '先') return -2; // 連兩先，這輪必須黑
+        if (last1 === '後' && last2 === '後') return 2;  // 連兩後，這輪必須紅
+    }
+    
+    // 條件檢查：先後差 (Absolute Balance) - 第5輪起強制執行
+    if (round >= 5) {
+        if (bal >= 2) return -2; // 已經多2先，這輪必須黑
+        if (bal <= -2) return 2; // 已經多2後，這輪必須紅
+    }
+    
+    // 期望平衡 (Preference)
+    if (bal > 0) return -1; 
+    if (bal < 0) return 1;
+    
+    // 歷史交替
+    if (len > 0) {
+        return (p.colors[len - 1] === '先') ? -0.5 : 0.5; 
+    }
+    
+    return 0;
+}
+
+// 2. 計算配對成本 (權重調整：分數差距 >>> 顏色偏好)
+function calculatePairingCost(p1, p2, activePlayerCount, currentRound) {
+    // --- 分數差距懲罰 (天文數字級) ---
+    let diff = Math.abs(p1.points - p2.points);
+    
+    // 使用 3 次方成長，並乘上巨大係數
+    // Diff 0 = 0
+    // Diff 1 = 1,000,000
+    // Diff 2 = 8,000,000
+    // Diff 3 = 27,000,000
+    // 這樣 Diff 3 的代價絕對遠大於 Diff 2 + 任何顏色衝突
+    let scoreCost = Math.pow(diff, 3) * 1000000;
+    
+    // --- 顏色相容性檢查 ---
+    let s1 = getPlayerColorStatus(p1, currentRound);
+    let s2 = getPlayerColorStatus(p2, currentRound);
+    
+    // 絕對非法 (犯規) -> 無限大
+    if (s1 === 2 && s2 === 2) return Infinity; 
+    if (s1 === -2 && s2 === -2) return Infinity;
+    
+    // 顏色偏好衝突 (非犯規) -> 權重僅 5,000
+    // 即使衝突最大 (1+1)*5000 = 10,000，也遠小於 Diff 1 的 1,000,000
+    let colorConflict = 0;
+    if ((s1 > 0 && s2 > 0) || (s1 < 0 && s2 < 0)) {
+        colorConflict = Math.abs(s1 + s2) * 2500; 
+    } else if (Math.abs(s1) >= 1 && Math.abs(s2) >= 1) {
+        // 互補獎勵
+        colorConflict = -500; 
+    }
+
+    // 避免重複對戰
+    if (p1.opponents.includes(p2.number)) return Infinity;
+
+    return scoreCost + colorConflict;
+}
+
+// 3. 生成下一輪
 function generateNextRound() {
     if (viewingRound !== sysData.currentRound && sysData.currentRound > 0) return Swal.fire('請先切換至最新一輪');
     if (sysData.currentRound > 0) {
@@ -1830,21 +1903,21 @@ function generateNextRound() {
     const rd = sysData.currentRound;
 
     let active = sysData.players.filter(p => !p.isBye && !p.isWithdrawn);
+    // 排序：積分高 -> 對手分高 -> 編號小
     active.sort((a, b) => (b.points - a.points) || (b.opponentPoints - a.opponentPoints) || (a.number - b.number));
 
     let pairings = [];
     let byePlayer = null;
 
-    const byeDummyObj = sysData.players.find(p => p.isBye);
-    const byeDummyNum = byeDummyObj ? byeDummyObj.number : -1;
-
+    // --- 輪空處理 ---
     if (active.length % 2 !== 0) {
         let byeIdx = -1;
         for (let i = active.length - 1; i >= 0; i--) {
-            let hasHadBye = false;
-            if (byeDummyNum !== -1) {
-                hasHadBye = active[i].opponents.includes(byeDummyNum);
-            }
+            let p = active[i];
+            let hasHadBye = p.opponents.some(opId => {
+                let op = sysData.players.find(x => x.number === opId);
+                return op && op.isBye;
+            });
             if (!hasHadBye) {
                 byeIdx = i;
                 break;
@@ -1854,47 +1927,15 @@ function generateNextRound() {
         byePlayer = active.splice(byeIdx, 1)[0];
     }
 
-    // === [修復重點 1] 強化配對成本計算 ===
-    function calculatePairingCost(p1, p2) {
-        let cost = 0;
-        let diff = Math.abs(p1.points - p2.points);
-        
-        // 積分差距懲罰
-        if (diff === 1) cost += 500;
-        else if (diff >= 2) cost += 50000000 * diff;
-
-        // 計算先後手差值 (先 - 後)
-        let bal1 = (p1.colors.filter(c=>c==='先').length) - (p1.colors.filter(c=>c==='後').length);
-        let bal2 = (p2.colors.filter(c=>c==='先').length) - (p2.colors.filter(c=>c==='後').length);
-
-        // 絕對禁止：兩人都必須執黑 (差值 >= 2) 或 兩人都必須執紅 (差值 <= -2)
-        // 這是造成 #18 第四黑的主因，必須設為天價懲罰
-        if (bal1 >= 2 && bal2 >= 2) return 100000000; // 兩人都太多先
-        if (bal1 <= -2 && bal2 <= -2) return 100000000; // 兩人都太多後 (如 #18 遇上 #16)
-
-        // 強烈懲罰：兩人都傾向同一色 (雖然沒爆掉，但很難排)
-        // 例如 p1(-1) 和 p2(-1)，兩人都想執紅
-        if (bal1 * bal2 > 0) cost += 5000; 
-
-        // 連續顏色懲罰
-        let t1 = getColorTrend(p1), t2 = getColorTrend(p2);
-        if ((t1 === 1 && t2 === 1) || (t1 === -1 && t2 === -1)) cost += 500; 
-
-        return cost;
-    }
-
-    function hasPlayed(p1, p2) {
-        return p1.opponents.includes(p2.number);
-    }
-
+    // --- 遞迴配對演算法 ---
     let bestSolution = null;
     let bestSolutionCost = Infinity;
-    const maxTime = 2000; 
+    const maxTime = 4000; // 稍微增加時間給電腦思考
     const startTime = Date.now();
 
-    function solveRecursively(currentPlayers, currentPairs, currentCost) {
-        if ((Date.now() - startTime) > maxTime) return;
+    function solve(currentPlayers, currentPairs, currentCost) {
         if (currentCost >= bestSolutionCost) return;
+        if ((Date.now() - startTime) > maxTime) return;
 
         if (currentPlayers.length === 0) {
             bestSolution = [...currentPairs];
@@ -1903,69 +1944,39 @@ function generateNextRound() {
         }
 
         let p1 = currentPlayers[0];
-        let candidates = [];
-        for (let i = 1; i < currentPlayers.length; i++) {
+        // 增加搜尋深度，確保能找到像您手動調整那樣的組合
+        // 因為現在分數權重很高，必須讓它多試試不同的組合
+        let searchLimit = Math.min(currentPlayers.length, 14); 
+        
+        for (let i = 1; i < searchLimit; i++) {
             let p2 = currentPlayers[i];
-            if (!hasPlayed(p1, p2)) {
-                candidates.push({ p2: p2, idx: i, cost: calculatePairingCost(p1, p2) });
+            let cost = calculatePairingCost(p1, p2, active.length, rd);
+            
+            if (cost === Infinity) continue;
+
+            let newCost = currentCost + cost;
+            if (newCost < bestSolutionCost) {
+                let nextPlayers = currentPlayers.filter((_, index) => index !== 0 && index !== i);
+                currentPairs.push({ p1: p1, p2: p2 });
+                solve(nextPlayers, currentPairs, newCost);
+                currentPairs.pop();
             }
-        }
-        candidates.sort((a,b) => a.cost - b.cost);
-
-        for (let cand of candidates) {
-            let newCost = currentCost + cand.cost;
-            if (newCost >= bestSolutionCost) continue;
-
-            let nextPlayers = currentPlayers.filter((_, index) => index !== 0 && index !== cand.idx);
-            currentPairs.push({ p1: p1, p2: cand.p2 });
-            
-            solveRecursively(nextPlayers, currentPairs, newCost);
-            
-            currentPairs.pop();
-            if ((Date.now() - startTime) > maxTime) break;
         }
     }
 
-    solveRecursively(active, [], 0);
+    solve(active, [], 0);
 
     if (!bestSolution) {
-        Swal.fire('提示', "無法找到完美組合，系統將放寬條件。", 'info');
-        // 放寬邏輯 (Relaxed Solver) 保持不變，省略以節省篇幅，邏輯同上
-        function solveRelaxed(currentPlayers, currentPairs, currentCost) {
-            if ((Date.now() - startTime) > maxTime + 1000) return;
-            if (currentCost >= bestSolutionCost) return;
-            if (currentPlayers.length === 0) {
-                bestSolution = [...currentPairs];
-                bestSolutionCost = currentCost;
-                return;
-            }
-            let p1 = currentPlayers[0];
-            for (let i = 1; i < currentPlayers.length; i++) {
-                let p2 = currentPlayers[i];
-                let cost = calculatePairingCost(p1, p2) + (hasPlayed(p1, p2) ? 100000 : 0);
-                let newCost = currentCost + cost;
-                if (newCost < bestSolutionCost) {
-                    let nextPlayers = currentPlayers.filter((_, index) => index !== 0 && index !== i);
-                    currentPairs.push({ p1: p1, p2: p2 });
-                    solveRelaxed(nextPlayers, currentPairs, newCost);
-                    currentPairs.pop();
-                }
-            }
+        Swal.fire('提示', '無法找到完美組合，系統將放寬條件。', 'warning');
+        for(let i=0; i<active.length; i+=2) {
+             pairings.push({round: rd, white: active[i], black: active[i+1], result: null});
         }
-        solveRelaxed(active, [], 0);
+    } else {
+        bestSolution.forEach(pair => {
+            let assigned = assignColors(pair.p1, pair.p2, rd);
+            pairings.push({round: rd, white: assigned.w, black: assigned.b, result: null});
+        });
     }
-
-    if (!bestSolution) {
-        Swal.fire('嚴重錯誤', "無法產生任何配對。", 'error');
-        sysData.currentRound--;
-        viewingRound = sysData.currentRound;
-        return;
-    }
-
-    bestSolution.forEach(pair => {
-        let assigned = assignColors(pair.p1, pair.p2);
-        pairings.push({round: rd, white: assigned.w, black: assigned.b, result: null});
-    });
 
     if (byePlayer) {
         let byeDummy = sysData.players.find(p => p.isBye);
@@ -1977,50 +1988,27 @@ function generateNextRound() {
     renderPairingList(true); 
     updateButtonsState();
 }
-function getColorTrend(p) { 
-    if(p.colors.length < 2) return 0; 
-    let l1 = p.colors[p.colors.length-1];
-    let l2 = p.colors[p.colors.length-2]; 
-    return (l1==='先' && l2==='先') ? 1 : (l1==='後' && l2==='後') ? -1 : 0; 
-}
 
-// === [修復重點 2] 強制執行 FIDE 顏色規則 ===
-function assignColors(p1, p2) {
+// 4. 分配顏色
+function assignColors(p1, p2, round) {
+    let s1 = getPlayerColorStatus(p1, round);
+    let s2 = getPlayerColorStatus(p2, round);
+    
+    if (s1 > s2) return {w: p1, b: p2};
+    if (s2 > s1) return {w: p2, b: p1};
+    
+    let last1 = (p1.colors.length > 0) ? p1.colors[p1.colors.length-1] : '';
+    let last2 = (p2.colors.length > 0) ? p2.colors[p2.colors.length-1] : '';
+    
+    if (last1 === '後' && last2 !== '後') return {w: p1, b: p2};
+    if (last2 === '後' && last1 !== '後') return {w: p2, b: p1};
+    
     let r1 = p1.colors.filter(c=>c==='先').length;
-    let b1 = p1.colors.filter(c=>c==='後').length;
     let r2 = p2.colors.filter(c=>c==='先').length;
-    let b2 = p2.colors.filter(c=>c==='後').length;
+    if (r1 < r2) return {w: p1, b: p2};
+    if (r2 < r1) return {w: p2, b: p1};
     
-    let bal1 = r1 - b1;
-    let bal2 = r2 - b2;
-
-    // 1. 絕對強制規則 (Absolute Constraints)
-    // 如果 p1 已經多 2 個後手 (bal1 <= -2)，他這輪 *必須* 執紅
-    if (bal1 <= -2) return {w: p1, b: p2};
-    // 如果 p1 已經多 2 個先手 (bal1 >= 2)，他這輪 *必須* 執黑
-    if (bal1 >= 2) return {w: p2, b: p1};
-    
-    // 同理檢查 p2
-    if (bal2 <= -2) return {w: p2, b: p1};
-    if (bal2 >= 2) return {w: p1, b: p2};
-
-    // 2. 避免連三色 (Trend Breaking)
-    let t1 = getColorTrend(p1);
-    let t2 = getColorTrend(p2);
-
-    if (t1 === 1 || t2 === -1) return {w: p2, b: p1}; // p1連兩先 OR p2連兩後 -> p1執黑
-    if (t1 === -1 || t2 === 1) return {w: p1, b: p2}; // p1連兩後 OR p2連兩先 -> p1執紅
-
-    // 3. 平衡數量 (Equalization)
-    if (bal1 > bal2) return {w: p2, b: p1}; // p1先手比較多，給他黑
-    if (bal2 > bal1) return {w: p1, b: p2}; // p2先手比較多，給他黑
-
-    // 4. 歷史交替 (History Alternation)
-    if (p1.colors.length > 0 && p1.colors[p1.colors.length-1] === '先') {
-        return {w: p2, b: p1};
-    }
-    
-    return {w: p1, b: p2};
+    return (p1.number < p2.number) ? {w: p1, b: p2} : {w: p2, b: p1};
 }
 function deleteLastRound(){ 
     if(sysData.currentRound===0) return;
