@@ -478,6 +478,78 @@ div:where(.swal2-container) .swal2-html-container { font-family: var(--font-main
     display: none;
 }
 
+/* === 移動端顯示修復 (Mobile Fixes) === */
+
+/* 1. 防止整個頁面左右滑動 */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* 2. 調整手機版容器邊距，爭取更多空間 */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px; /* 縮小邊距 */
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* 3. 修復配對卡片在小螢幕被切掉的問題 */
+    .pairing-grid {
+        /* 強制手機版改為單欄顯示，並自動填滿寬度 */
+        grid-template-columns: 1fr !important; 
+        gap: 15px;
+    }
+
+    /* 4. 讓導航按鈕 (設定/配對/名次/總表) 在手機上自動換行，不要超出螢幕 */
+    .nav-pills {
+        width: 100%;
+        flex-wrap: wrap;
+        border-radius: 20px;
+        padding: 8px;
+    }
+    .nav-item {
+        flex: 1 1 40%; /* 讓按鈕自動調整大小，一行約兩個 */
+        justify-content: center;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+        padding: 8px 10px;
+    }
+
+    /* 5. 調整標題大小，避免太長被切掉 */
+    h1#displayEventName {
+        font-size: 1.6rem;
+        word-break: break-word; /* 允許長標題換行 */
+        padding: 0 10px;
+    }
+
+    /* 6. 操作按鈕區 (配對新輪/列印等) 自動適應 */
+    .action-bar {
+        padding: 10px;
+        flex-direction: column; /* 手機版改為垂直排列 */
+        gap: 10px;
+    }
+    .action-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* 按鈕兩兩並排 */
+        gap: 8px;
+    }
+    .action-group button {
+        width: 100%;
+        margin: 0;
+    }
+    /* 分隔線在手機版隱藏 */
+    .divider { display: none; }
+    
+    /* 7. 確保表格容器可以內部滑動，而不會撐開整個頁面 */
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* 讓滑動更順暢 */
+    }
+}
+
 </style>
 </head>
 <body class="theme-blue">
