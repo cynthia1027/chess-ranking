@@ -341,6 +341,40 @@ div:where(.swal2-container) .swal2-html-container { font-family: var(--font-main
     }
     .status-pill { margin-left: 0; margin-top: 5px; }
 }
+
+/* --- 調動模式：位置變更提示特效 --- */
+@keyframes ghostPulse {
+    0% { background-color: #ffffff; border-color: #f59e0b; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    50% { background-color: #fffbeb; border-color: #d97706; box-shadow: 0 0 10px 2px rgba(245, 158, 11, 0.2); }
+    100% { background-color: #ffffff; border-color: #f59e0b; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+}
+
+.player-box.modified-slot {
+    animation: ghostPulse 2s infinite ease-in-out;
+    border: 2px dashed #f59e0b !important; /* 變成虛線框 */
+    color: #b45309; /* 字體稍微變深橘色 */
+}
+
+/* 加上一個小圖示提示 */
+.player-box.modified-slot::after {
+    content: "\f074"; /* FontAwesome 交換圖示 */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #f59e0b;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 5;
+}
 </style>
 </head>
 <body class="theme-blue">
@@ -659,6 +693,7 @@ div:where(.swal2-container) .swal2-html-container { font-family: var(--font-main
 <div id="loadingOverlay"><div class="spinner-box"><div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-ring"></div></div><div id="loadingMainText">PROCESSING</div><div id="loadingSubText">Please wait...</div></div>
 
 <script>
+let originalPairingsSnapshot = null; // 用來儲存調動前的原始座位
 /* --- V18.0 System Logic (Added RR Support) --- */
 const STORE_PREFIX = 'swiss_v18_';
 const MASTER_INDEX_KEY = 'swiss_v18_master_index';
@@ -1413,37 +1448,33 @@ function updateMatchProgress() {
         badge.innerHTML = `<i class="fa-solid fa-check-circle"></i> 本輪全數完賽`;
     }
 }
-/* === 修復後的 renderPairingList (加入重複輪空警告) === */
 function renderPairingList(animate = false, highlightNumber = null){
     const listDiv = document.getElementById('pairingList'); const title = document.getElementById('roundTitle');
     if(viewingRound === 0) { title.innerText = "準備中"; listDiv.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#9ca3af;grid-column:1/-1">請點擊「初始化首輪配對」開始比賽</div>'; return; }
     let isCurrent = (viewingRound === sysData.currentRound);
     title.innerText = `第 ${viewingRound} 輪` + (isCurrent ? "" : " (歷史)");
+    
     let pairs = sysData.pairings.filter(p=>p.round === viewingRound);
+    // 排序邏輯必須與 toggleManualMode 裡的快照排序一致
     pairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
+    
     listDiv.innerHTML = '';
     
     pairs.forEach((p, idx) => {
         let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, viewingRound);
         let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, viewingRound);
         
-        // --- 1. 檢查重複對戰 (全域警告) ---
+        // 1. 檢查重複對戰
         let isRematch = false;
-        // 只有雙方都不是輪空時，才檢查重複對戰
         if(!sysData.settings.isRoundRobin && !p.black.isBye && !p.white.isBye && sysData.pairings.some(past => past.round < viewingRound && ((past.white.number===p.white.number && past.black.number===p.black.number) || (past.white.number===p.black.number && past.black.number===p.white.number)))) { 
             isRematch = true; 
         }
 
-        // --- 2. 新增：檢查重複輪空 (全域警告) ---
+        // 2. 檢查重複輪空
         let isRepeatBye = false;
         let isByeGame = p.black.isBye || p.white.isBye;
-
-        if (isByeGame) {
-            // 找出誰是「活人」(非輪空的那位)
+        if (!sysData.settings.isRoundRobin && isByeGame) {
             let realPlayer = p.black.isBye ? p.white : p.black;
-            
-            // 檢查該活人是否在過去拿過輪空
-            // 條件：輪次 < 當前輪次 且 (白方是自己且黑方是輪空 或 黑方是自己且白方是輪空)
             if (realPlayer && !realPlayer.isBye) {
                 isRepeatBye = sysData.pairings.some(past => 
                     past.round < viewingRound && 
@@ -1453,13 +1484,31 @@ function renderPairingList(animate = false, highlightNumber = null){
             }
         }
         
-        // --- 3. 檢查三連色 (如果是輪空局，不顯示三連色警告) ---
+        // 3. 檢查三連色
         let redWarn = (!isByeGame && checkThreeColorStreak(p.white, '先')) ? '<div class="player-warn-badge">連三先</div>' : '';
         let blackWarn = (!isByeGame && checkThreeColorStreak(p.black, '後')) ? '<div class="player-warn-badge">連三後</div>' : '';
 
+        // === [新增]：檢查調動狀態 ===
+        let modifiedW = '';
+        let modifiedB = '';
+        
+        // 只有在調動模式，且快照存在時才檢查
+        if (isManualMode && originalPairingsSnapshot && originalPairingsSnapshot[idx]) {
+            let original = originalPairingsSnapshot[idx];
+            
+            // 比對紅方 (white) 是否換人
+            if (p.white.number !== original.white.number) {
+                modifiedW = 'modified-slot';
+            }
+            // 比對黑方 (black) 是否換人
+            if (p.black.number !== original.black.number) {
+                modifiedB = 'modified-slot';
+            }
+        }
+        // ============================
+
         const card = document.createElement('div'); card.className = 'match-card-ui';
         
-        // 設定卡片樣式
         if (p.result !== null) { 
             card.classList.add('has-result'); 
             if (isByeGame) { card.classList.add('result-bye'); } 
@@ -1468,13 +1517,11 @@ function renderPairingList(animate = false, highlightNumber = null){
             else { card.classList.add('result-black'); } 
         }
         
-        // 若有任何一種警告，外框都變紅
         if(isRematch || isRepeatBye) card.style.border = "2px solid #ef4444";
         
         if (animate) { card.style.animation = `fadeIn 0.5s ease-out forwards`; card.style.opacity = 0; card.style.animationDelay = `${idx * 0.05}s`; }
         if (highlightNumber !== null && (p.white.number === highlightNumber || p.black.number === highlightNumber)) card.style.boxShadow = "0 0 0 3px var(--primary)";
         
-        // 中央 VS 區域內容
         let centerHTML = '';
         if(p.result === null) {
             if(!isByeGame && !isManualMode && !isViewerMode) { 
@@ -1491,39 +1538,33 @@ function renderPairingList(animate = false, highlightNumber = null){
             centerHTML = `<div class="vs-area"><span class="result-tag ${tagC}">${resT}</span>` + ((!isManualMode && !isViewerMode) ? `<small style="color:#999;cursor:pointer;text-decoration:underline;margin-top:5px" onclick="setRes(${p.white.number},null)">重填</small>`:'') + `</div>`;
         }
 
-        // 調動模式的點擊事件
         let wClick = isManualMode ? `onclick="handleManualSelect(${idx}, true)"` : ''; 
         let bClick = isManualMode ? `onclick="handleManualSelect(${idx}, false)"` : '';
         let selW = (swapSource && swapSource.pairingIdx===idx && swapSource.isWhite) ? 'selected' : ''; 
         let selB = (swapSource && swapSource.pairingIdx===idx && !swapSource.isWhite) ? 'selected' : '';
         
-        // --- 4. 組合警告標籤 HTML ---
         let warningBadge = '';
         if (isRematch) {
-            // 重複對戰 (紅色)
             warningBadge = `<div class="global-warning"><span class="badge-rematch"><i class="fa-solid fa-triangle-exclamation"></i> 重複對戰</span></div>`;
         } else if (isRepeatBye) {
-            // 重複輪空 (深橘色，圖示改為禁止符號)
             warningBadge = `<div class="global-warning"><span class="badge-rematch" style="background:#ea580c"><i class="fa-solid fa-ban"></i> 重複輪空</span></div>`;
         }
 
-        // 5. 最終 HTML 組合
- // 5. 最終 HTML 組合 (請確認這裡面的 # 都已經刪除)
         card.innerHTML = `
             ${warningBadge}
             <div class="match-header"><div class="table-num-box">第 ${idx+1} 桌</div><span class="round-label">ROUND ${viewingRound}</span></div>
             <div class="match-content">
-                <div class="player-box ${selW}" ${wClick}>
+                <!-- 加上 modifiedW 變數 -->
+                <div class="player-box ${selW} ${modifiedW}" ${wClick}>
                     ${redWarn}
-                    <!-- 注意：下面這行原本有 #，現在刪掉了 -->
                     ${p.white.isBye?'':`<span class="player-num-badge">${p.white.number}</span>`}
                     <span class="player-name" style="color:#ef4444">${p.white.isBye?'輪空':escapeHtml(p.white.name)}</span>
                     <span class="player-score">${wPts}分</span>
                 </div>
                 ${centerHTML}
-                <div class="player-box ${selB}" ${bClick}>
+                <!-- 加上 modifiedB 變數 -->
+                <div class="player-box ${selB} ${modifiedB}" ${bClick}>
                     ${blackWarn}
-                    <!-- 注意：下面這行原本有 #，現在刪掉了 -->
                     ${p.black.isBye ? '' : `<span class="player-num-badge">${p.black.number}</span>`}
                     <span class="player-name" style="color:#3b82f6">${p.black.isBye?'輪空':escapeHtml(p.black.name)}</span>
                     <span class="player-score">${bPts}分</span>
@@ -1536,19 +1577,63 @@ function renderPairingList(animate = false, highlightNumber = null){
     updateMatchProgress(); 
 }
 function toggleManualMode() {
-    // --- 新增：大循環禁止調動 ---
+    // 大循環防呆
     if (sysData.settings.isRoundRobin) {
-        return Swal.fire({
-            title: '禁止調動',
-            text: '大循環賽制依照固定公式排陣，禁止手動調換選手，以免破壞對戰邏輯。',
-            icon: 'warning'
-        });
+        return Swal.fire({ title: '禁止調動', text: '大循環賽制依照固定公式排陣，禁止手動調換選手。', icon: 'warning' });
     }
     if(viewingRound !== sysData.currentRound) return Swal.fire('只能在最新一輪進行調整');
-    isManualMode = !isManualMode; swapSource = null;
-    const btn = document.getElementById('manualModeBtn'); const ind = document.getElementById('swapIndicator');
-    if(isManualMode) { btn.innerHTML = '<i class="fa-solid fa-check"></i> 完成'; btn.className = "btn-green"; ind.style.display = 'block'; ind.innerText = "請點擊第一位選手..."; }
-    else { btn.innerHTML = '<i class="fa-solid fa-wrench"></i> 調動'; btn.className = "btn-orange"; ind.style.display = 'none'; }
+    
+    isManualMode = !isManualMode; 
+    swapSource = null;
+    
+    const btn = document.getElementById('manualModeBtn'); 
+    const ind = document.getElementById('swapIndicator');
+    
+    // --- 處理復原按鈕的 DOM 元素 ---
+    let resetBtn = document.getElementById('manualResetBtn');
+    if (!resetBtn) {
+        // 如果按鈕不存在，建立它並放在 manualModeBtn 旁邊
+        resetBtn = document.createElement('button');
+        resetBtn.id = 'manualResetBtn';
+        resetBtn.className = 'btn-gray'; // 灰色按鈕，比較不搶眼
+        resetBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> 復原';
+        resetBtn.style.display = 'none'; // 預設隱藏
+        resetBtn.style.marginLeft = '8px'; // 增加一點間距
+        resetBtn.onclick = resetManualSwaps; // 綁定復原功能
+        // 插入到 manualModeBtn 的後面
+        btn.parentNode.insertBefore(resetBtn, btn.nextSibling);
+    }
+    // ----------------------------
+
+    if(isManualMode) { 
+        // 進入調動模式：拍攝快照
+        let currentPairs = sysData.pairings.filter(p => p.round === viewingRound);
+        // 排序確保一致
+        currentPairs.sort((a,b) => { if(a.black.isBye) return 1; if(b.black.isBye) return -1; return 0; });
+        // 深層複製存檔
+        originalPairingsSnapshot = JSON.parse(JSON.stringify(currentPairs));
+
+        // 改變主按鈕樣式
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> 完成'; 
+        btn.className = "btn-green"; 
+        
+        // 顯示提示與復原按鈕
+        ind.style.display = 'block'; 
+        ind.innerText = "請點擊第一位選手..."; 
+        resetBtn.style.display = 'inline-flex'; // 顯示復原按鈕
+        
+    } else { 
+        // 離開調動模式：清空快照
+        originalPairingsSnapshot = null; 
+
+        // 還原主按鈕樣式
+        btn.innerHTML = '<i class="fa-solid fa-wrench"></i> 調動'; 
+        btn.className = "btn-orange"; 
+        
+        // 隱藏提示與復原按鈕
+        ind.style.display = 'none'; 
+        resetBtn.style.display = 'none'; // 隱藏復原按鈕
+    }
     renderPairingList(false); 
 }
 function handleManualSelect(pIdx, isWhite) {
@@ -1944,6 +2029,42 @@ function batchWithdraw() {
     } else {
         Swal.fire('無符合條件的選手', '', 'info');
     }
+}
+function resetManualSwaps() {
+    if (!originalPairingsSnapshot) return;
+
+    Swal.fire({
+        title: '復原調動？',
+        text: '將回復到剛按下「調動」時的狀態，所有未儲存的交換都將遺失。',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#6b7280',
+        cancelButtonColor: '#d33',
+        confirmButtonText: '確定復原',
+        cancelButtonText: '取消'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // 1. 還原資料：先刪除當前輪次的舊資料
+            sysData.pairings = sysData.pairings.filter(p => p.round !== viewingRound);
+            
+            // 2. 把快照 Deep Copy 回去 (避免參照問題)
+            let restoredPairs = JSON.parse(JSON.stringify(originalPairingsSnapshot));
+            sysData.pairings.push(...restoredPairs);
+            
+            // 3. 儲存並重繪
+            saveCurrentGroupData();
+            
+            // 4. 清除選取狀態
+            swapSource = null;
+            document.getElementById('swapIndicator').innerText = "已復原。請點擊第一位選手...";
+            
+            renderPairingList(false);
+            
+            // 小提示
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+            Toast.fire({ icon: 'success', title: '已復原初始狀態' });
+        }
+    });
 }
 </script>
 </body>
