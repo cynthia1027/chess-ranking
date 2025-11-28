@@ -1140,124 +1140,123 @@ function assignColors(p1, p2, round) {
     return (p1.number < p2.number) ? {w: p1, b: p2} : {w: p2, b: p1};
 }
 
-// 2. B: 大循環配對演算法 (Berger Table) - 支援雙循環自動換先
+// 2. B: 大循環配對演算法 (基於貝格爾編排法 - 同餘數總和法)
 function generateRoundRobinPairing() {
-    // 取得真實選手與總人數邏輯 (維持不變)
-    let realPlayers = sysData.players.filter(p => !p.isBye);
-    realPlayers.sort((a, b) => a.number - b.number);
-    
-    // 因為我們現在強制補輪空，players.length 應該要是偶數
-    // 但為了保險，維持貝格爾算法的通用性
-    let n = realPlayers.length; // 真人人數
-    let totalPlayers = sysData.players.length; // 含輪空
-    
-    // 計算單循環總輪數
-    let singleCycleRounds = totalPlayers - 1;
-    
+    // 1. 準備選手並排序
+    let allPlayers = [...sysData.players].sort((a, b) => a.number - b.number);
+    let N = allPlayers.length; // 總人數 (含輪空，必定為偶數)
+    let M = N - 1;             // 基數 (Modulus)，也是單循環總輪數
     let currentRound = sysData.currentRound;
     
-    // === 判斷是否為第二循環 ===
+    // 判斷是否為第二循環 (雙循環)
     let isSecondCycle = false;
-    let effectiveRound = currentRound; // 用來計算貝格爾公式的「有效輪次」
-
-    if (currentRound > singleCycleRounds) {
+    let effectiveRound = currentRound;
+    if (currentRound > M) {
         isSecondCycle = true;
-        effectiveRound = currentRound - singleCycleRounds; // 例如 R6 變回 R1
+        effectiveRound = currentRound - M;
+        // 處理多循環狀況 (取餘數)
+        if (effectiveRound > M) effectiveRound = (effectiveRound - 1) % M + 1;
     }
-    // =======================
 
     let pairings = [];
-    
-    // 貝格爾編排法邏輯 (針對 effectiveRound 計算)
-    // 總位置數 (必須偶數)
-    let totalPos = totalPlayers; 
-    
-    let fixedIdx = totalPos - 1;
-    let ring = [];
-    for(let i=0; i < totalPos - 1; i++) ring.push(i);
-    
-    // 執行 (effectiveRound - 1) 次輪轉
-    for(let r=1; r < effectiveRound; r++) {
-        let first = ring.shift();
-        ring.push(first);
-    }
-    
-    let currentTable = [];
-    
-    // 固定位配對
-    let p1_idx = fixedIdx;
-    let p2_idx = ring[0];
-    
-    if (effectiveRound % 2 !== 0) {
-        currentTable.push({ w: p2_idx, b: p1_idx });
-    } else {
-        currentTable.push({ w: p1_idx, b: p2_idx });
-    }
-    
-    // 其他桌次
-    let left = 1;
-    let right = ring.length - 1;
-    
-    while (left < right) {
-        let idxA = ring[left];
-        let idxB = ring[right];
-        currentTable.push({ w: idxA, b: idxB });
-        left++;
-        right--;
-    }
-    
-    // 轉換為真實對陣
-    currentTable.forEach(pair => {
-        let wIndex = pair.w;
-        let bIndex = pair.b;
-        
-        let wPlayer, bPlayer, res = null;
-        
-        // 取得選手物件 (注意：索引對應到 sysData.players，因為我們有排序且補滿了)
-        // 為了安全，我們建立一個 mapping 陣列
-        // 陣列內容：[真實選手1, 真實選手2, ..., 輪空選手]
-        // 這樣 index 就能直接對應
-        let allPlayersMap = [...realPlayers];
-        let byePlayer = sysData.players.find(p => p.isBye);
-        if(byePlayer) allPlayersMap.push(byePlayer);
-        
-        // 如果現在人數是偶數且沒輪空，allPlayersMap 就是 realPlayers
-        // 這裡要小心 index 超出範圍，理論上 performInit 已經處理好了
-        
-        // 修正：直接用 sysData.players 排序後的陣列比較穩
-        let sortedAll = [...sysData.players].sort((a,b)=>a.number - b.number);
-        // 如果有輪空，輪空通常是號碼最大的 (因為是最後 push 進去的)
-        
-        wPlayer = sortedAll[wIndex];
-        bPlayer = sortedAll[bIndex];
+    let pairedSet = new Set(); // 用來記錄這一輪已經配對過的號碼
 
-        // === 關鍵：如果是第二循環，交換紅黑 ===
-        if (isSecondCycle) {
-            let temp = wPlayer;
-            wPlayer = bPlayer;
-            bPlayer = temp;
-        }
-        // ===================================
-        
-        // 判斷輪空勝負
-        let isByeGame = false;
-        if (wPlayer.isBye) { // 紅方輪空 -> 黑勝
-             res = 0; 
-             isByeGame = true;
-        } else if (bPlayer.isBye) { // 黑方輪空 -> 紅勝
-             res = 1;
-             isByeGame = true;
-        }
-        
-        pairings.push({
-            round: currentRound,
-            white: wPlayer,
-            black: bPlayer,
-            result: res
-        });
-    });
+    // === 核心演算法：同餘數總和法 (Magic Sum Method) ===
+    // 公式：對手號碼相加總和 (Mod M) = 輪次 + 1
     
+    let targetSum = effectiveRound + 1; // 這一輪的目標和 (Magic Sum)
+
+    // 遍歷 1 到 M (非固定選手)
+    for (let i = 1; i <= M; i++) {
+        if (pairedSet.has(i)) continue; // 如果這個號碼已經配對過，跳過
+
+        // 計算對手 j
+        // 數學推導： i + j ≡ targetSum (mod M)
+        // 所以 j = targetSum - i
+        let j = targetSum - i;
+        
+        // 同餘數調整 (Normalize)：確保 j 在 1~M 之間
+        while (j <= 0) j += M;
+        while (j > M) j -= M;
+
+        // 取得選手物件 (陣列是 0-indexed，號碼是 1-indexed)
+        let playerA = allPlayers[i - 1];
+        
+        if (i === j) {
+            // 當計算出的對手是自己時 ( 2*i ≡ targetSum )
+            // 代表這位選手對上「固定選手」(最大號 N)
+            let fixedPlayer = allPlayers[N - 1];
+            pairings.push(finalizeMagicSumPair(playerA, fixedPlayer, currentRound, isSecondCycle, N));
+            pairedSet.add(i);
+            // N 號不用加入 Set，因為迴圈只跑 1~M
+        } else {
+            // 一般配對：i 對上 j
+            let playerB = allPlayers[j - 1];
+            pairings.push(finalizeMagicSumPair(playerA, playerB, currentRound, isSecondCycle, N));
+            pairedSet.add(i);
+            pairedSet.add(j);
+        }
+    }
+
     sysData.pairings.push(...pairings);
+}
+
+// 核心輔助：貝格爾顏色計算機 (配合總和法)
+function finalizeMagicSumPair(p1, p2, round, isSecondCycle, totalPlayers) {
+    let w, b;
+    let maxNum = totalPlayers; // 最大號 (固定選手編號)
+
+    // 確保 p1 是小號，p2 是大號，方便後續邏輯判斷
+    let small = p1.number < p2.number ? p1 : p2;
+    let big = p1.number < p2.number ? p2 : p1;
+
+    // --- 貝格爾顏色法則 (Berger Color Rules) ---
+    
+    if (big.number === maxNum) {
+        // [情況 A] 對上固定選手 (最大號)
+        // 規則：若小號 <= N/2，固定選手拿黑(後)；否則固定選手拿紅(先)
+        let half = maxNum / 2;
+        if (small.number <= half) {
+            // 小號(small) 先手(紅)，固定選手(big) 後手(黑)
+            w = small; 
+            b = big;
+        } else {
+            // 固定選手(big) 先手(紅)，小號(small) 後手(黑)
+            w = big;
+            b = small;
+        }
+    } else {
+        // [情況 B] 一般選手對陣
+        // 規則：號碼相加，奇數則小號紅，偶數則大號紅
+        let sum = small.number + big.number;
+        if (sum % 2 !== 0) {
+            // 總和奇數：小號紅
+            w = small;
+            b = big;
+        } else {
+            // 總和偶數：大號紅
+            w = big;
+            b = small;
+        }
+    }
+    // ---------------------------------------
+
+    // 處理雙循環換先
+    if (isSecondCycle) {
+        let temp = w; w = b; b = temp;
+    }
+
+    // 自動判定輪空勝負
+    let res = null;
+    if (w.isBye) res = 0;      // 紅輪空 -> 黑勝
+    else if (b.isBye) res = 1; // 黑輪空 -> 紅勝
+
+    return {
+        round: round,
+        white: w,
+        black: b,
+        result: res
+    };
 }
 
 // 3. 分數計算 (含 SB 分)
