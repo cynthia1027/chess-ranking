@@ -1392,7 +1392,7 @@ function updateMatchProgress() {
         badge.innerHTML = `<i class="fa-solid fa-check-circle"></i> 本輪全數完賽`;
     }
 }
-/* === 修復後的 renderPairingList (解決輪空警告問題) === */
+/* === 修復後的 renderPairingList (加入重複輪空警告) === */
 function renderPairingList(animate = false, highlightNumber = null){
     const listDiv = document.getElementById('pairingList'); const title = document.getElementById('roundTitle');
     if(viewingRound === 0) { title.innerText = "準備中"; listDiv.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#9ca3af;grid-column:1/-1">請點擊「初始化首輪配對」開始比賽</div>'; return; }
@@ -1406,14 +1406,33 @@ function renderPairingList(animate = false, highlightNumber = null){
         let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, viewingRound);
         let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, viewingRound);
         
-        // 1. 檢查重複對戰 (全域警告)
+        // --- 1. 檢查重複對戰 (全域警告) ---
         let isRematch = false;
-        if(!sysData.settings.isRoundRobin && !p.black.isBye && sysData.pairings.some(past => past.round < viewingRound && ((past.white.number===p.white.number && past.black.number===p.black.number) || (past.white.number===p.black.number && past.black.number===p.white.number)))) { 
+        // 只有雙方都不是輪空時，才檢查重複對戰
+        if(!sysData.settings.isRoundRobin && !p.black.isBye && !p.white.isBye && sysData.pairings.some(past => past.round < viewingRound && ((past.white.number===p.white.number && past.black.number===p.black.number) || (past.white.number===p.black.number && past.black.number===p.white.number)))) { 
             isRematch = true; 
         }
-        
-        // 2. 檢查三連色 (修正：如果是輪空局，直接不顯示警告)
+
+        // --- 2. 新增：檢查重複輪空 (全域警告) ---
+        let isRepeatBye = false;
         let isByeGame = p.black.isBye || p.white.isBye;
+
+        if (isByeGame) {
+            // 找出誰是「活人」(非輪空的那位)
+            let realPlayer = p.black.isBye ? p.white : p.black;
+            
+            // 檢查該活人是否在過去拿過輪空
+            // 條件：輪次 < 當前輪次 且 (白方是自己且黑方是輪空 或 黑方是自己且白方是輪空)
+            if (realPlayer && !realPlayer.isBye) {
+                isRepeatBye = sysData.pairings.some(past => 
+                    past.round < viewingRound && 
+                    (past.white.number === realPlayer.number || past.black.number === realPlayer.number) &&
+                    (past.white.isBye || past.black.isBye)
+                );
+            }
+        }
+        
+        // --- 3. 檢查三連色 (如果是輪空局，不顯示三連色警告) ---
         let redWarn = (!isByeGame && checkThreeColorStreak(p.white, '先')) ? '<div class="player-warn-badge">連三先</div>' : '';
         let blackWarn = (!isByeGame && checkThreeColorStreak(p.black, '後')) ? '<div class="player-warn-badge">連三後</div>' : '';
 
@@ -1427,7 +1446,10 @@ function renderPairingList(animate = false, highlightNumber = null){
             else if (p.result === 0.5) { card.classList.add('result-draw'); } 
             else { card.classList.add('result-black'); } 
         }
-        if(isRematch) card.style.border = "2px solid #ef4444";
+        
+        // 若有任何一種警告，外框都變紅
+        if(isRematch || isRepeatBye) card.style.border = "2px solid #ef4444";
+        
         if (animate) { card.style.animation = `fadeIn 0.5s ease-out forwards`; card.style.opacity = 0; card.style.animationDelay = `${idx * 0.05}s`; }
         if (highlightNumber !== null && (p.white.number === highlightNumber || p.black.number === highlightNumber)) card.style.boxShadow = "0 0 0 3px var(--primary)";
         
@@ -1454,12 +1476,19 @@ function renderPairingList(animate = false, highlightNumber = null){
         let selW = (swapSource && swapSource.pairingIdx===idx && swapSource.isWhite) ? 'selected' : ''; 
         let selB = (swapSource && swapSource.pairingIdx===idx && !swapSource.isWhite) ? 'selected' : '';
         
-        // 3. 組合重複對戰警告 (全域)
-        let rematchHtml = isRematch ? `<div class="global-warning"><span class="badge-rematch"><i class="fa-solid fa-triangle-exclamation"></i> 重複對戰</span></div>` : '';
+        // --- 4. 組合警告標籤 HTML ---
+        let warningBadge = '';
+        if (isRematch) {
+            // 重複對戰 (紅色)
+            warningBadge = `<div class="global-warning"><span class="badge-rematch"><i class="fa-solid fa-triangle-exclamation"></i> 重複對戰</span></div>`;
+        } else if (isRepeatBye) {
+            // 重複輪空 (深橘色，圖示改為禁止符號)
+            warningBadge = `<div class="global-warning"><span class="badge-rematch" style="background:#ea580c"><i class="fa-solid fa-ban"></i> 重複輪空</span></div>`;
+        }
 
-        // 4. 最終 HTML 組合
+        // 5. 最終 HTML 組合
         card.innerHTML = `
-            ${rematchHtml}
+            ${warningBadge}
             <div class="match-header"><div class="table-num-box">第 ${idx+1} 桌</div><span class="round-label">ROUND ${viewingRound}</span></div>
             <div class="match-content">
                 <div class="player-box ${selW}" ${wClick}>
@@ -1477,11 +1506,9 @@ function renderPairingList(animate = false, highlightNumber = null){
                 </div>
             </div>`;
             
-        // ... (前面省略)
         listDiv.appendChild(card);
     });
 
-    // 這一行必須在函式的括號「裡面」
     updateMatchProgress(); 
 }
 function toggleManualMode() {
@@ -1697,7 +1724,7 @@ function runSeedDraw() {
 }
 function showSeedReportModal(arrangement, score, adjustResult) {
     let html = `<div style="background:#fff7ed; padding:10px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;"><strong>📊 抽籤摘要</strong><br>總人數：${arrangement.length} 人<br>違規分數：${score} ${score === 0 ? '🎉 (完美)' : ''}</div>`;
-    if (adjustResult.adjusted) html += `<div style="margin-bottom:15px; font-size:0.9rem; color:#d97706;"><strong>⚖️ 奇偶平衡調整</strong><br>${adjustResult.message.replace(/\n/g, '<br>')}</div>`;
+    if (adjustResult.adjusted) html += `<div style="margin-bottom:15px; font-size:0.9rem; color:#d97706;"><strong⚖️ 奇偶平衡調整</strong><br>${adjustResult.message.replace(/\n/g, '<br>')}</div>`;
     html += `<strong>📋 前 10 名預覽：</strong><ul style="padding-left:20px; margin-top:5px;">`;
     for(let i=0; i<Math.min(arrangement.length, 10); i+=2) { if(i+1 >= arrangement.length) break; let p1 = arrangement[i], p2 = arrangement[i+1]; html += `<li>桌${i/2+1}：${escapeHtml(p1.name)} vs ${escapeHtml(p2.name)}</li>`; }
     html += `<li>... (共 ${Math.ceil(arrangement.length/2)} 桌)</li></ul>`;
