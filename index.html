@@ -966,11 +966,34 @@ function generateNextRound() {
 }
 
 // 2. A: 瑞士制演算法 (保持原樣)
+// 修正後的顏色狀態判斷函式
 function getPlayerColorStatus(p, round) {
-    let r = p.colors.filter(c => c === '先').length; let b = p.colors.filter(c => c === '後').length; let bal = r - b; let len = p.colors.length;
-    if (len >= 2 && p.colors[len-1] === p.colors[len-2]) return p.colors[len-1] === '先' ? -2 : 2;
-    if (round >= 5 && Math.abs(bal) >= 2) return bal >= 2 ? -2 : 2;
-    return bal > 0 ? -1 : (bal < 0 ? 1 : (len > 0 ? (p.colors[len-1] === '先' ? -0.5 : 0.5) : 0));
+    // 1. 取得「有效顏色歷史」（過濾掉輪空）
+    let validColors = p.colors.filter(c => c !== '空');
+    let len = validColors.length;
+
+    let r = validColors.filter(c => c === '先').length;
+    let b = validColors.filter(c => c === '後').length;
+    let bal = r - b;
+
+    // 2. 判斷連續顏色 (使用過濾後的陣列)
+    // 如果有效場次 >= 2，且最後兩次實戰顏色相同
+    if (len >= 2 && validColors[len-1] === validColors[len-2]) {
+        // 如果連兩次先，下一輪絕對想要後 (回傳 -2)
+        // 如果連兩次後，下一輪絕對想要先 (回傳 2)
+        return validColors[len-1] === '先' ? -2 : 2;
+    }
+
+    // 3. 色差平衡 (Color Balance)
+    // FIDE 精神：任何時候色差都不應超過 2 (絕對值 > 2 為非法，除非最後一輪)
+    // 建議將 round >= 5 的限制移除，或改為 round > 2
+    // 這裡我們加強邏輯：如果色差絕對值 >= 2，給予強烈修正訊號
+    if (Math.abs(bal) >= 2) {
+         return bal > 0 ? -2 : 2; // bal>0(紅多)回傳-2(要黑)，bal<0(黑多)回傳2(要紅)
+    }
+
+    // 4. 一般交替 (弱偏好)
+    return bal > 0 ? -1 : (bal < 0 ? 1 : (len > 0 ? (validColors[len-1] === '先' ? -0.5 : 0.5) : 0));
 }
 function calculatePairingCost(p1, p2, activeCount, round) {
     let diff = Math.abs(p1.points - p2.points); let scoreCost = Math.pow(diff, 3) * 1000000;
