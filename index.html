@@ -103,39 +103,47 @@ button:active { transform: translateY(0); box-shadow: var(--shadow-sm); filter: 
 .player-box { flex: 1; text-align: center; cursor: pointer; padding: 10px 5px; border-radius: 10px; transition: 0.2s; position: relative; border: 2px solid transparent; }
 .player-box.selected { background: #fff7ed; border-color: var(--warning); } .player-box:hover { background: var(--bg-faint); }
 /* --- 修改處：統一黑底白字的號碼球 CSS --- */
+/* --- 修改處：統一黑底白字的號碼球 CSS (修正變形問題) --- */
 .player-num-badge {
-    display: inline-flex;         /* 讓文字垂直水平置中 */
+    display: inline-flex;         
     justify-content: center;
     align-items: center;
-    width: 28px;                  /* 固定大小 */
-    height: 28px;
+    
+    /* 強制鎖定寬高，避免變形 */
+    width: 28px !important;       
+    height: 28px !important;
+    min-width: 28px !important;   /* 雙重保險 */
+    flex-shrink: 0;               /* 禁止被擠壓或拉伸 */
+    
     border-radius: 50%;           /* 正圓形 */
     font-size: 0.9rem;
-    font-weight: 800;             /* 極粗體 */
+    font-weight: 800;             
     
-    /* 核心配色：黑底白字 */
     color: white;
-    background: #334155;          /* 深鐵灰，比純黑更有質感 */
+    background: #334155;          
     
     margin-bottom: 8px;
     font-family: var(--font-mono);
     
-    /* 視覺裝飾 */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* 立體陰影 */
-    border: 2px solid white;      /* 白色邊框，讓黑圈更明顯 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+    border: 2px solid white;      
     position: relative;
     top: -2px;
 }
+
 /* --- 表格內的號碼球微調樣式 --- */
 .table-badge {
-    width: 24px;              /* 比卡片的 28px 稍微小一點，節省空間 */
-    height: 24px;
-    font-size: 0.8rem;        /* 字體稍微縮小 */
-    margin: 0 auto;           /* 強制水平置中 */
-    box-shadow: none;         /* 表格內不需要陰影，保持扁平乾淨 */
-    border: 1px solid white;  /* 邊框改細一點 */
-    top: 0;                   /* 不需要微調位置 */
-    vertical-align: middle;   /* 垂直置中 */
+    width: 24px !important;       /* 表格內較小 */
+    height: 24px !important;
+    min-width: 24px !important;
+    
+    font-size: 0.8rem;       
+    margin: 0 auto;               /* 水平置中 */
+    
+    box-shadow: none;         
+    border: 1px solid white;  
+    top: 0;                   
+    margin-bottom: 0;             /* 表格內不需要下方留白 */
 }
 .player-name { font-weight: 800; font-size: 1.15rem; display: block; line-height: 1.2; margin-bottom: 6px; color: var(--text-main); }
 .player-score { font-size: 0.8rem; color: white; background: var(--text-sub); padding: 2px 10px; border-radius: 12px; font-weight: 600; opacity: 0.8; }
@@ -1806,16 +1814,68 @@ function updateRankings(){
     });
 }
 function showPlayerHistory(n) {
-    updateScores(); let p = sysData.players.find(x=>x.number===n); if(!p) return;
-    document.getElementById('hPlayerName').innerText = p.name; document.getElementById('hPlayerNum').innerText = "#" + p.number; document.getElementById('hTotalPoints').innerText = p.points;
+    updateScores(); 
+    let p = sysData.players.find(x => x.number === n); 
+    if(!p) return;
+    
+    // 1. 清空原本下方的 #編號
+    document.getElementById('hPlayerNum').innerHTML = ''; 
+    
+    // 2. 製作大圓圈編號 (尺寸放大至 1.8em，字體加大)
+    const bigBadge = `<span style="
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        
+        width: 1.8em;           /* [放大] 寬度 */
+        height: 1.8em;          /* [放大] 高度 */
+        
+        border-radius: 50%;
+        background: rgba(255,255,255,0.25); /* 稍微增加一點不透明度，更有質感 */
+        border: 3px solid white;
+        
+        font-size: 0.75em;      /* [放大] 數字大小 */
+        font-weight: 800;
+        
+        margin-right: 15px;     /* 增加間距 */
+        flex-shrink: 0;         /* 防止被擠壓 */
+        font-family: var(--font-mono);
+        
+        /* 移除 top 偏移，交給外層 Flexbox 處理置中 */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    ">${p.number}</span>`;
+
+    // 3. 組合：使用 Flexbox 容器確保圓圈跟姓名「絕對垂直置中」
+    const nameHtml = `<span style="line-height:1.1;">${escapeHtml(p.name)}</span>`;
+    
+    document.getElementById('hPlayerName').innerHTML = 
+        `<div style="display:flex; align-items:center;">${bigBadge}${nameHtml}</div>`;
+    
+    // ----------------------------
+
+    document.getElementById('hTotalPoints').innerText = p.points;
+    
     let html = '';
     p.opponents.forEach((o, i) => {
-        let op = sysData.players.find(x=>x.number===o);
-        let opName = op ? (op.isBye ? "輪空" : `<span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:50%;margin-right:5px;font-size:0.8rem">${op.number}</span> ${escapeHtml(op.name)} <small>(${op.points}分)</small>`) : "未知";
-        let res = p.results[i] || '進行中'; let resClass = res==='勝'?'tag-win':(res==='負'?'tag-loss':(res==='和'?'tag-draw':''));
-        html += `<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #eee"><span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:0.8rem;margin-right:10px;font-weight:bold">第${i+1}輪</span><div style="flex:1">${opName}</div><div style="width:30px;text-align:center;font-weight:bold">${p.colors[i]}</div><div style="width:50px;text-align:right"><span class="result-tag ${resClass}" style="padding:2px 8px;font-size:0.8rem">${res}</span></div></div>`;
+        let op = sysData.players.find(x => x.number === o);
+        let opName = op ? (op.isBye ? "輪空" : `<span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:50%;margin-right:5px;font-size:0.8rem;font-weight:bold;min-width:20px;display:inline-block;text-align:center;">${op.number}</span> ${escapeHtml(op.name)} <small>(${op.points}分)</small>`) : "未知";
+        let res = p.results[i] || '進行中'; 
+        let resClass = res === '勝' ? 'tag-win' : (res === '負' ? 'tag-loss' : (res === '和' ? 'tag-draw' : ''));
+        
+        let colorBadge = p.colors[i] === '先' 
+            ? `<span style="font-weight:900; color:#ef4444">先</span>` 
+            : (p.colors[i] === '後' ? `<span style="font-weight:900; color:#3b82f6">後</span>` : `<span style="color:#9ca3af">●</span>`);
+
+        html += `<div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #eee">
+            <span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:4px;font-size:0.85rem;margin-right:10px;font-weight:bold;min-width:55px;text-align:center;">第${i+1}輪</span>
+            <div style="flex:1; font-weight:500;">${opName}</div>
+            <div style="width:40px;text-align:center;">${colorBadge}</div>
+            <div style="width:50px;text-align:right"><span class="result-tag ${resClass}" style="padding:4px 10px;font-size:0.85rem">${res}</span></div>
+        </div>`;
     });
-    document.getElementById('historyList').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無紀錄</div>'; document.getElementById('historyModal').style.display='block';
+    
+    document.getElementById('historyList').innerHTML = html || '<div style="text-align:center;padding:20px;color:#999">無紀錄</div>'; 
+    document.getElementById('historyModal').style.display = 'block';
 }
 function toggleChart() { const c = document.getElementById('statsContainer'); c.style.display = (c.style.display === 'none' || c.style.display === '') ? 'block' : 'none'; if(c.style.display === 'block') renderStatsChart(); }
 function renderStatsChart() {
@@ -1991,11 +2051,10 @@ function renderSummaryTable() {
 
     // 2. 決定要顯示幾輪
     let trs = sysData.currentRound || 1;
-    // 判斷是否為大循環，改變表頭名稱
     let isRR = sysData.settings && sysData.settings.isRoundRobin;
     let scoreTitle = isRR ? 'SB分' : '對手分';
 
-    // 3. 建立表頭 (Header)
+    // 3. 建立表頭
     let h = `<thead><tr>
         <th>編號</th>
         <th>姓名</th>
@@ -2010,14 +2069,14 @@ function renderSummaryTable() {
     // 4. 準備選手資料並排序
     let players = sysData.players.filter(p => !p.isBye);
 
-    // 排序：積分 > 對手分(SB) > 號碼
+    // 排序：積分 > 對手分 > 號碼
     players.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.opponentPoints !== a.opponentPoints) return b.opponentPoints - a.opponentPoints;
         return a.number - b.number;
     });
 
-    // 5. 建立內容 (Body)
+    // 5. 建立內容
     if (players.length === 0) {
         h += `<tr><td colspan="${4 + trs}" style="padding:30px; color:#9ca3af; text-align:center;">
             <i class="fa-solid fa-circle-info"></i> 尚無資料
@@ -2026,22 +2085,24 @@ function renderSummaryTable() {
         players.forEach(p => {
             let safeName = escapeHtml(p.name);
             
-            // --- 每一列的 HTML 組合 ---
+            // --- [修改重點]：讓姓名變成可點擊的連結 ---
+            let clickableNameHtml = `<span class="clickable-name" onclick="showPlayerHistory(${p.number})">${safeName}</span>`;
+            
             h += `<tr>
-                <!-- ★★★ 修改重點：加上 player-num-badge table-badge class ★★★ -->
+                <!-- 號碼球樣式保留 -->
                 <td><span class="player-num-badge table-badge">${p.number}</span></td>
                 
-                <td style="font-weight:500;">${safeName}</td>
+                <!-- 姓名欄位改為 clickableNameHtml -->
+                <td style="font-weight:500;">${clickableNameHtml}</td>
+                
                 <td style="font-weight:bold;color:#ef4444">${p.points}</td>
                 <td>${p.opponentPoints}</td>`;
 
             for (let i = 0; i < trs; i++) {
                 if (i < p.opponents.length) {
                     let res = p.results[i] || '-';
-                    // 設定勝負顏色
                     let color = res === '勝' ? '#ef4444' : (res === '負' ? '#3b82f6' : (res === '和' ? '#10b981' : '#999'));
                     
-                    // 設定先後手圖示
                     let stone;
                     if (p.colors[i] === '空') {
                         stone = '<span style="color:#9ca3af; font-size:1.1em;">●</span>'; 
