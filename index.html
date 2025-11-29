@@ -51,7 +51,7 @@ body { font-family: var(--font-main); background-color: var(--bg-faint); color: 
 .highlight-row { animation: highlightPulse 2.5s ease-out; } .highlight-card { animation: highlightPulse 2.5s ease-out; border-color: #ca8a04 !important; z-index: 10; }
 
 /* Layout Components */
-.group-bar { background: var(--card-bg); padding: 0 20px; height: 60px; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid var(--border); }
+.group-bar { background: rgba(255, 255, 255, 0.85);backdrop-filter: blur(12px); padding: 0 20px; height: 60px; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid rgba(0,0,0,0.05); }
 .current-group-display { font-weight: 700; font-size: 1rem; color: var(--text-main); display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 8px 16px; border-radius: 30px; background: rgba(0,0,0,0.03); transition: all 0.2s; }
 .current-group-display:hover { background: rgba(0,0,0,0.06); }
 .group-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--primary); display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.8); }
@@ -156,6 +156,14 @@ button:active { transform: translateY(0); box-shadow: var(--shadow-sm); filter: 
 
 /* Tables */
 .table-container { background: white; border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid var(--border); overflow-x: auto; }
+.modern-table th:nth-child(1), .modern-table td:nth-child(1),
+.modern-table th:nth-child(2), .modern-table td:nth-child(2) {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: inherit; /* 繼承背景色避免透明 */
+    /* 第二欄要加上第一欄的寬度作為 left */
+}
 .modern-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .modern-table th { background: #f8fafc; color: var(--text-sub); font-weight: 700; padding: 14px 10px; text-align: center; border-bottom: 2px solid var(--border); font-size: 0.85rem; white-space: nowrap; }
 .modern-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: center; font-size: 0.95rem; color: var(--text-main); white-space: nowrap; }
@@ -257,7 +265,8 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: #8b5cf6; cursor:
 /* Viewer Mode & Mobile Fixes */
 .viewer-mode .btn-res-group, .viewer-mode #genBtn, .viewer-mode #undoBtn, .viewer-mode #manualModeBtn, .viewer-mode [onclick*="openStatusModal"], .viewer-mode [onclick*="setup"], .viewer-mode [onclick*="shareRankingsImg"], .viewer-mode [onclick*="exportToExcel"], .viewer-mode [onclick*="shareSummaryImg"] { display: none !important; }
 .viewer-mode .player-box { pointer-events: none; cursor: default; }
-.viewer-mode .match-card-ui:hover { transform: none; box-shadow: var(--shadow-sm); border-color: var(--border); }
+.viewer-mode .match-card-ui:hover { transform: -4px; box-shadow: box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15), 
+                0 4px 8px -4px rgba(0, 0, 0, 0.05) }
 .viewer-mode #topBarTitle { pointer-events: none; } .viewer-mode .fa-chevron-down { display: none; }
 html, body { overflow-x: hidden; width: 100%; }
 @media (max-width: 768px) { .container { padding: 10px; width: 100%; overflow-x: hidden; } .pairing-grid { grid-template-columns: 1fr !important; gap: 15px; } .nav-pills { width: 100%; flex-wrap: wrap; border-radius: 20px; padding: 8px; } .nav-item { flex: 1 1 40%; justify-content: center; margin-bottom: 5px; font-size: 0.9rem; padding: 8px 10px; } h1#displayEventName { font-size: 1.6rem; word-break: break-word; padding: 0 10px; } .action-bar { padding: 10px; flex-direction: column; gap: 10px; } .action-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .action-group button { width: 100%; margin: 0; } .divider { display: none; } .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; } }
