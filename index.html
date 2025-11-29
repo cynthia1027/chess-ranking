@@ -1979,19 +1979,89 @@ const printThemes = { blue:{head:'#1e40af',row:'#eff6ff'}, green:{head:'#047857'
 function getThemeColorObj() { const tName = sysData.settings.themeColor || 'blue'; return printThemes[tName] || printThemes['blue']; }
 
 function getPairingListHTML(mode) {
-    const pairs = sysData.pairings.filter(p => p.round === viewingRound); pairs.sort((a, b) => { if (a.black.isBye) return 1; if (b.black.isBye) return -1; return 0; });
-    const theme = getThemeColorObj(); const abbr = sysData.info.eventAbbr || sysData.info.eventName; const typeText = mode === 'pre' ? '對陣表' : '成績表'; const fullTitle = `${abbr} 第 ${viewingRound} 輪 ${typeText}`;
-    const calculatedRowHeight = 275 / (pairs.length + 1.2); 
-    const css = `<style>@page{size:portrait;margin:5mm;}body{margin:0;padding:0;font-family:"Noto Sans TC",sans-serif;background:white;}.print-container{width:100%;display:flex;flex-direction:column;background:white;}.print-header{text-align:center;height:45px;line-height:45px;border-bottom:4px solid #000;margin-bottom:2px;flex-shrink:0;}.print-header h1{font-size:28pt;color:#000;margin:0;font-weight:900;letter-spacing:2px;line-height:1;}.print-table{width:99%;margin:0 auto;border-collapse:collapse;border:3px solid #000;table-layout:fixed;}.print-table th{background-color:${theme.head}!important;color:white!important;height:40px;font-size:20pt;font-weight:900;border:2px solid #000;-webkit-print-color-adjust:exact;}.print-table td{height:${Math.max(10, Math.min(40, calculatedRowHeight))}mm;font-size:${Math.max(14, Math.min(28, calculatedRowHeight*2.3))}pt;text-align:center;vertical-align:middle;border:2px solid #000;font-weight:900;white-space:nowrap;overflow:hidden;color:#000;padding:0 2px;line-height:0.95;}.print-table tr:nth-child(even) td{background-color:${theme.row}!important;-webkit-print-color-adjust:exact;}.table-badge{display:flex;justify-content:center;align-items:center;background-color:#000;color:#fff!important;border-radius:6px;width:90%;height:85%;margin:0 auto;font-family:'Roboto Mono',monospace;-webkit-print-color-adjust:exact;font-size:0.85em;font-weight:900;line-height:1;}.name-cell{font-weight:900;letter-spacing:1px;}.score-red{color:#dc2626!important;-webkit-print-color-adjust:exact;font-family:'Roboto Mono',monospace;}.win-res{color:#dc2626!important;font-weight:500;font-size:0.6em;}.loss-res{color:#2563eb!important;font-weight:500;font-size:0.6em;}.draw-res{color:#16a34a!important;font-weight:500;font-size:0.6em;}.bye-res{color:#d63384!important;font-weight:500;font-size:0.6em;}.vs-col{color:#999;font-style:italic;font-family:serif;font-size:0.8em;font-weight:500;}</style>`;
+    const pairs = sysData.pairings.filter(p => p.round === viewingRound); 
+    pairs.sort((a, b) => { if (a.black.isBye) return 1; if (b.black.isBye) return -1; return 0; });
+    
+    const theme = getThemeColorObj(); 
+    const abbr = sysData.info.eventAbbr || sysData.info.eventName; 
+    const typeText = mode === 'pre' ? '對陣表' : '成績表'; 
+    const fullTitle = `${abbr} 第 ${viewingRound} 輪 ${typeText}`;
+    
+    // 1. 計算列高 (單位 mm)
+    let rawRowHeight = 275 / (pairs.length + 1.2);
+    const rowH = Math.max(10, Math.min(40, rawRowHeight));
+    
+    // 2. 動態計算圓圈大小 (單位 mm)
+    const badgeSize = Math.min(13, rowH * 0.8);
+    
+    // 3. 動態計算字體大小
+    const badgeFontSize = badgeSize * 1.8;
+    
+    // 4. 計算表格內文字大小
+    const tdFontSize = Math.max(14, Math.min(28, rowH * 2.3));
+
+    const css = `<style>
+        @page { size: portrait; margin: 5mm; }
+        body { margin: 0; padding: 0; font-family: "Noto Sans TC", sans-serif; background: white; }
+        .print-container { width: 100%; display: flex; flex-direction: column; background: white; }
+        .print-header { text-align: center; height: 45px; line-height: 45px; border-bottom: 4px solid #000; margin-bottom: 2px; flex-shrink: 0; }
+        .print-header h1 { font-size: 28pt; color: #000; margin: 0; font-weight: 900; letter-spacing: 2px; line-height: 1; }
+        .print-table { width: 99%; margin: 0 auto; border-collapse: collapse; border: 3px solid #000; table-layout: fixed; }
+        .print-table th { background-color: ${theme.head} !important; color: white !important; height: 40px; font-size: 20pt; font-weight: 900; border: 2px solid #000; -webkit-print-color-adjust: exact; }
+        .print-table td { 
+            height: ${rowH}mm; 
+            font-size: ${tdFontSize}pt; 
+            text-align: center; vertical-align: middle; 
+            border: 2px solid #000; font-weight: 900; 
+            white-space: nowrap; overflow: hidden; color: #000; 
+            padding: 0 2px; line-height: 0.95; 
+        }
+        .print-table tr:nth-child(even) td { background-color: ${theme.row} !important; -webkit-print-color-adjust: exact; }
+        
+        /* ★★★ 改名為 .print-table-badge 避免影響主畫面 ★★★ */
+        .print-table-badge {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            color: #fff !important;
+            
+            width: ${badgeSize}mm !important;
+            height: ${badgeSize}mm !important;
+            border-radius: 50%;
+            
+            margin: 0 auto;
+            font-family: sans-serif;
+            -webkit-print-color-adjust: exact;
+            
+            font-size: ${badgeFontSize}pt;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .name-cell { font-weight: 900; letter-spacing: 1px; }
+        .score-red { color: #dc2626 !important; -webkit-print-color-adjust: exact; font-family: 'Roboto Mono', monospace; }
+        .win-res { color: #dc2626 !important; font-weight: 500; font-size: 0.6em; }
+        .loss-res { color: #2563eb !important; font-weight: 500; font-size: 0.6em; }
+        .draw-res { color: #16a34a !important; font-weight: 500; font-size: 0.6em; }
+        .bye-res { color: #d63384 !important; font-weight: 500; font-size: 0.6em; }
+        .vs-col { color: #999; font-style: italic; font-family: serif; font-size: 0.8em; font-weight: 500; }
+    </style>`;
+    
     let h = css + `<div class="print-container"><div class="print-header"><h1>${fullTitle}</h1></div><table class="print-table"><thead><tr><th width="8%">桌次</th><th width="8%">編號</th><th width="24%">紅方 (先)</th><th width="7%">積分</th><th width="7%">結果</th><th width="7%">積分</th><th width="8%">編號</th><th width="24%">黑方 (後)</th></tr></thead><tbody>`;
+    
     pairs.forEach((p, i) => {
         let res = mode === 'pre' ? "VS" : ""; let resClass = "vs-col";
         if (mode === 'post' && p.result !== null) { if (p.result === 1) { res = "勝"; resClass = "win-res"; } else if (p.result === 0.5) { res = "和"; resClass = "draw-res"; } else if (p.result === 0) { res = "負"; resClass = "loss-res"; } }
         if (p.black.isBye || p.white.isBye) { res = "空"; resClass = "bye-res"; }
+        
         let wPts = p.white.isBye ? '-' : calcScoreBeforeRound(p.white.number, mode === 'pre' ? viewingRound : viewingRound + 1);
         let bPts = p.black.isBye ? '-' : calcScoreBeforeRound(p.black.number, mode === 'pre' ? viewingRound : viewingRound + 1);
-        h += `<tr><td><div class="table-badge">${i + 1}</div></td><td>${p.white.isBye?'':p.white.number}</td><td class="name-cell">${escapeHtml(p.white.name)}</td><td class="score-red">${wPts}</td><td class="${resClass}">${res}</td><td class="score-red">${bPts}</td><td>${p.black.isBye?'':p.black.number}</td><td class="name-cell">${escapeHtml(p.black.name)}</td></tr>`;
+        
+        // ★★★ 下面這行的 class 改為 print-table-badge ★★★
+        h += `<tr><td><div class="print-table-badge">${i + 1}</div></td><td>${p.white.isBye?'':p.white.number}</td><td class="name-cell">${escapeHtml(p.white.name)}</td><td class="score-red">${wPts}</td><td class="${resClass}">${res}</td><td class="score-red">${bPts}</td><td>${p.black.isBye?'':p.black.number}</td><td class="name-cell">${escapeHtml(p.black.name)}</td></tr>`;
     });
+    
     h += `</tbody></table></div>`; return h;
 }
 
