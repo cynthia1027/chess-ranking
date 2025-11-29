@@ -398,6 +398,43 @@ div:where(.swal2-container) .swal2-html-container { font-family: var(--font-main
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     z-index: 5;
 }
+/* --- Empty State (空狀態插圖) --- */
+.empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    grid-column: 1 / -1; /* 讓它在 Grid 佈局中佔滿整行 */
+    animation: fadeIn 0.5s ease-out;
+}
+
+.empty-state-svg {
+    width: 180px;  /* 插圖大小 */
+    height: 180px;
+    margin-bottom: 20px;
+    opacity: 0.8; 
+}
+
+/* 讓 SVG 內的顏色跟隨主題變色 */
+.empty-accent { fill: var(--bg-faint); }  /* 淺色背景 */
+.empty-primary { fill: var(--primary); }  /* 主色調 */
+.empty-gray { fill: #cbd5e1; }            /* 灰色線條 */
+
+.empty-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
+
+.empty-desc {
+    font-size: 0.95rem;
+    color: var(--text-sub);
+    max-width: 300px;
+    line-height: 1.5;
+}
 </style>
 </head>
 <body class="theme-blue">
@@ -993,7 +1030,13 @@ function renderGroupList() {
         div.innerHTML = `<div style="display:flex; align-items:center; flex:1" onclick="switchGroupAndClose('${g.id}')"><div class="group-color-dot" style="background:${colorMap[g.color]||'#ccc'}"></div><div class="group-info"><span style="font-weight:700; display:block;">${escapeHtml(g.name)}</span><span style="font-size:0.85rem; color:var(--text-sub);">${escapeHtml(g.groupName) || '未命名組別'}</span></div></div><div class="group-actions">${groups.length > 1 ? `<button class="btn-outline" style="color:var(--danger); border-color:var(--danger); padding:6px 10px;" onclick="deleteGroup('${g.id}')"><i class="fa-solid fa-trash"></i></button>` : ''}</div>`;
         list.appendChild(div);
     });
-    if(list.children.length === 0) list.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">沒有找到符合的賽事</div>`;
+     if(list.children.length === 0) {
+        list.innerHTML = getEmptyStateHTML(
+            'search', 
+            '找不到符合的賽事', 
+            '試著使用不同的關鍵字搜尋，<br>或是點擊上方按鈕建立新的比賽。'
+        );
+    }
 }
 function closeGroupManager() { document.getElementById('groupManagerModal').style.display = 'none'; }
 function switchGroupAndClose(id) { switchGroup(id); closeGroupManager(); }
@@ -1642,6 +1685,51 @@ function updateMatchProgress() {
         badge.innerHTML = `<i class="fa-solid fa-check-circle"></i> 本輪全數完賽`;
     }
 }
+// 取得空狀態的 HTML (type: 'start' | 'search' | 'empty')
+function getEmptyStateHTML(type, title, desc) {
+    let svgContent = '';
+    
+    if (type === 'start') {
+        // 插圖：棋盤與旗幟 (代表準備開始)
+        svgContent = `
+        <svg class="empty-state-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="100" cy="100" r="90" class="empty-accent" />
+            <!-- 棋盤格紋示意 -->
+            <rect x="50" y="80" width="100" height="10" rx="2" class="empty-gray" opacity="0.3"/>
+            <rect x="50" y="110" width="100" height="10" rx="2" class="empty-gray" opacity="0.3"/>
+            <rect x="95" y="60" width="10" height="80" rx="2" class="empty-gray" opacity="0.3"/>
+            <!-- 帥/將 棋子 -->
+            <circle cx="100" cy="90" r="35" fill="white" stroke="var(--primary)" stroke-width="4"/>
+            <circle cx="100" cy="90" r="28" fill="none" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="100" y="100" font-family="sans-serif" font-weight="900" font-size="28" fill="var(--primary)" text-anchor="middle">將</text>
+            <!-- 裝飾 -->
+            <path d="M140,40 Q160,20 180,40 T200,60" fill="none" stroke="var(--warning)" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+            <circle cx="40" cy="150" r="5" class="empty-primary" opacity="0.5"/>
+            <circle cx="160" cy="50" r="8" class="empty-primary" opacity="0.3"/>
+        </svg>`;
+    } else {
+        // 插圖：找不到資料 (放大鏡)
+        svgContent = `
+        <svg class="empty-state-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="100" cy="100" r="85" class="empty-accent" />
+            <!-- 檔案夾 -->
+            <path d="M60,70 L80,50 L140,50 L140,140 L60,140 Z" fill="white" stroke="var(--primary)" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M60,70 L140,70" stroke="var(--primary)" stroke-width="3"/>
+            <!-- 放大鏡 -->
+            <circle cx="110" cy="110" r="35" fill="rgba(255,255,255,0.8)" stroke="var(--text-sub)" stroke-width="4"/>
+            <path d="M135,135 L160,160" stroke="var(--text-sub)" stroke-width="8" stroke-linecap="round"/>
+            <!-- 問號 -->
+            <text x="110" y="125" font-family="sans-serif" font-weight="900" font-size="40" fill="var(--text-sub)" text-anchor="middle">?</text>
+        </svg>`;
+    }
+
+    return `
+    <div class="empty-state-container">
+        ${svgContent}
+        <div class="empty-title">${title}</div>
+        <div class="empty-desc">${desc}</div>
+    </div>`;
+}
 function renderPairingList(animate = false, highlightNumber = null){
     const listDiv = document.getElementById('pairingList'); 
     const title = document.getElementById('roundTitle');
@@ -1649,7 +1737,11 @@ function renderPairingList(animate = false, highlightNumber = null){
     // 0. 特殊狀態：尚未初始化
     if(viewingRound === 0) { 
         title.innerText = "準備中"; 
-        listDiv.innerHTML = '<div style="text-align:center;width:100%;padding:40px;color:#9ca3af;grid-column:1/-1">請點擊「初始化首輪配對」開始比賽</div>'; 
+        listDiv.innerHTML = getEmptyStateHTML(
+            'start', 
+            '比賽尚未開始', 
+            '選手名單設定完成後，<br>請點擊「初始化首輪配對」來產生第一輪賽程。'
+        );
         return; 
     }
 
